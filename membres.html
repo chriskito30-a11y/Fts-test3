@@ -433,6 +433,7 @@ const C = {
 };
 
 /* ── ÉTAT ────────────────────────────────────────────────────── */
+let db        = null;  // module-level pour loadDocs Firebase
 let cur       = null;
 let allEvts   = [];
 let allDocs   = {};
@@ -449,7 +450,7 @@ const ICONS = {
 
 /* ── INITIALISATION ──────────────────────────────────────────── */
 (function init() {
-  const db   = FTS.initFirebase();
+  db = FTS.initFirebase();
   const auth = firebase.auth();
 
   auth.onAuthStateChanged(async user => {
@@ -605,27 +606,59 @@ async function showCat(i) {
   await loadDocs(cat.name, i);
 }
 
-/* ── CHARGEMENT DOCUMENTS ────────────────────────────────────── */
+/* ── CHARGEMENT DOCUMENTS (Firebase + Sheets) ────────────────── */
 async function loadDocs(name, idx) {
-  const el  = document.getElementById('dc-' + idx);
-  const url = FTS.SHEETS.ressources;
+  const el = document.getElementById('dc-' + idx);
+  if (!el) return;
 
-  if (!url) {
-    el.innerHTML = "<p style='color:var(--muted);font-size:.82rem'>Aucun document disponible.</p>";
-    return;
-  }
+  let rows = [];
+
+  // Source 1 : Firebase RTDB (nouveaux docs via profs.html)
   try {
-    const res  = await FTS.fetch(url);
-    const rows = FTS.parseCSVRaw(await res.text())
-      .map(c => ({ cat:c[0], sub:c[1], name:c[2], url:c[3], type:(c[4]||'doc').toLowerCase().trim() }))
-      .filter(x => x.cat && x.name && x.cat.toLowerCase() === name.toLowerCase())
-      .reverse();
+    const snap = await db.ref('fts_ressources').orderByChild('cat').equalTo(name).once('value');
+    if (snap.exists()) {
+      snap.forEach(child => {
+        const d = child.val();
+        rows.push({
+          cat:  d.cat,
+          sub:  d.subcat || '',
+          name: d.name,
+          url:  d.url || '',
+          type: (d.type || 'doc').toLowerCase().trim(),
+          key:  child.key,
+          ts:   d.createdAt || 0,
+        });
+      });
+    }
+  } catch(e) {}
 
-    allDocs[idx] = rows;
-    showDocs(rows, idx);
-  } catch(e) {
-    el.innerHTML = "<p style='color:var(--muted);font-size:.82rem'>Impossible de charger les documents.</p>";
+  // Source 2 : Google Sheets (docs existants/legacy)
+  if (FTS.SHEETS.ressources) {
+    try {
+      const res  = await FTS.fetch(FTS.SHEETS.ressources);
+      const sheetRows = FTS.parseCSVRaw(await res.text())
+        .map(c => ({
+          cat:  c[0], sub: c[1], name: c[2],
+          url:  c[3], type: (c[4] || 'doc').toLowerCase().trim(),
+          key:  null, ts: 0,
+        }))
+        .filter(x => x.cat && x.name && x.cat.toLowerCase() === name.toLowerCase());
+      rows = rows.concat(sheetRows);
+    } catch(e) {}
   }
+
+  // Dédoublonnage par nom + élimination doublons Sheets/Firebase
+  const seen = new Set();
+  const deduped = rows
+    .sort((a, b) => b.ts - a.ts) // Firebase en premier (plus récent)
+    .filter(r => {
+      const k = r.name.trim().toLowerCase() + r.cat.toLowerCase();
+      if (seen.has(k)) return false;
+      seen.add(k); return true;
+    });
+
+  allDocs[idx] = deduped;
+  showDocs(deduped, idx);
 }
 
 /* ── AFFICHAGE DOCUMENTS ─────────────────────────────────────── */
