@@ -226,6 +226,29 @@
 }
 .btn-del:hover { background: rgba(212,32,26,.15); border-color: var(--red); }
 
+/* ── BADGES RÔLES ────────────────────────────────────────────── */
+.role-badge {
+  display: inline-block; font-size: .58rem; font-weight: 500;
+  padding: .15rem .5rem; border-radius: 2px; margin-left: .4rem;
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.role-admin { background: rgba(212,32,26,.15); border: 1px solid rgba(212,32,26,.3); color: var(--red); }
+.role-prof  { background: rgba(201,168,76,.1);  border: 1px solid rgba(201,168,76,.2); color: var(--gold); }
+.role-member{ background: rgba(255,255,255,.04); border: 1px solid #2a2a2a; color: #555; }
+
+/* ── SÉLECTEUR DE RÔLE ───────────────────────────────────────── */
+.role-selector { display: flex; gap: .4rem; margin-top: .4rem; flex-wrap: wrap; }
+.role-pill {
+  padding: .4rem .9rem; border-radius: 20px; cursor: pointer;
+  font-size: .72rem; border: 1px solid #2a2a2a; color: #555;
+  transition: all .2s; font-family: var(--font-body); background: transparent;
+  user-select: none;
+}
+.role-pill:hover { border-color: #444; color: var(--white); }
+.role-pill.active-member { border-color: #555;          color: var(--white); background: rgba(255,255,255,.06); }
+.role-pill.active-prof   { border-color: var(--gold);   color: var(--gold);  background: rgba(201,168,76,.1); }
+.role-pill.active-admin  { border-color: var(--red);    color: var(--red);   background: rgba(212,32,26,.12); }
+
 .empty-msg { color: var(--muted); font-size: .82rem; padding: 1rem 0; font-style: italic; }
 
 @media (max-width: 600px) {
@@ -291,6 +314,14 @@
   <div class="modal">
     <h3>Modifier l'accès</h3>
     <input type="hidden" id="mod-uid">
+
+    <label class="modal-label">Rôle</label>
+    <div class="role-selector" id="mod-role-selector">
+      <div class="role-pill" data-role="member" onclick="selectRole(this)">👤 Membre</div>
+      <div class="role-pill" data-role="prof"   onclick="selectRole(this)">🎓 Prof</div>
+      <div class="role-pill" data-role="admin"  onclick="selectRole(this)">🛡 Admin</div>
+    </div>
+
     <label class="modal-label">Discipline(s) — clique pour sélectionner</label>
     <div class="pill-container" id="mod-cat-pills"></div>
     <div id="mod-sub-groups"></div>
@@ -401,7 +432,10 @@ function renderPending() {
     <div class="user-card">
       <div class="user-avatar pending">${FTS.esc(u.name.charAt(0))}</div>
       <div class="user-info">
-        <div class="user-name">${FTS.esc(u.name)}</div>
+        <div class="user-name">
+          ${FTS.esc(u.name)}
+          <span class="role-badge role-${u.role||'member'}">${roleLabel(u.role)}</span>
+        </div>
         <div class="user-meta">${fmtDate(u.ts)}</div>
         <div class="user-group">
           ${FTS.esc(u.group || "Aucune discipline")}${u.subgroup ? " — " + FTS.esc(u.subgroup) : ""}
@@ -431,6 +465,7 @@ function renderMembers() {
         <div class="user-name">
           ${FTS.esc(u.name)}
           <span class="status-badge status-${u.status}">${u.status}</span>
+          <span class="role-badge role-${u.role||'member'}">${roleLabel(u.role)}</span>
         </div>
         <div class="user-group">
           ${FTS.esc(u.group || "—")}${u.subgroup ? " — " + FTS.esc(u.subgroup) : ""}
@@ -466,15 +501,37 @@ async function revokeUser(id) {
   await db.ref("fts_users/" + id + "/status").set("refused");
 }
 
+/* ── RÔLES ───────────────────────────────────────────────────── */
+function roleLabel(role) {
+  const map = { admin: "🛡 Admin", prof: "🎓 Prof", member: "👤 Membre" };
+  return map[role] || "👤 Membre";
+}
+
+function selectRole(el) {
+  document.querySelectorAll(".role-pill").forEach(p => {
+    p.className = "role-pill";
+  });
+  const role = el.dataset.role;
+  el.classList.add("active-" + role);
+}
+
 /* ── MODALE MODIFICATION ─────────────────────────────────────── */
 function openModModal(id) {
   const u     = allUsers[id];
   const uCats = (u.group    || "").split(", ").filter(Boolean);
   const uSubs = (u.subgroup || "").split(", ").filter(Boolean);
   const cats  = [...new Set(allGroups.map(g => g.cat))];
+  const role  = u.role || "member";
 
   document.getElementById("mod-uid").value = id;
 
+  // Sélecteur de rôle
+  document.querySelectorAll(".role-pill").forEach(p => {
+    p.className = "role-pill";
+    if (p.dataset.role === role) p.classList.add("active-" + role);
+  });
+
+  // Disciplines
   document.getElementById("mod-cat-pills").innerHTML = cats.map(c =>
     `<div class="pill ${uCats.includes(c) ? "active" : ""}" onclick="toggleModPill(this,'cat')">${FTS.esc(c)}</div>`
   ).join("");
@@ -521,17 +578,23 @@ async function saveModification() {
   const cats = Array.from(document.querySelectorAll("#mod-cat-pills .pill.active")).map(p => p.textContent);
   const subs = Array.from(document.querySelectorAll(".mod-sub-pills .pill.active")).map(p => p.textContent);
 
+  // Rôle sélectionné
+  const activePill = document.querySelector(".role-pill[class*='active-']");
+  const role = activePill ? activePill.dataset.role : "member";
+
   // ✅ Forum profile (canaux forum.html)
   await db.ref("fts_forum/users/" + id).update({
     group:    cats.join(", "),
     subgroup: subs.join(", "),
     status:   "active",
+    role:     role,
   });
 
-  // ✅ Profil principal (catégories membres.html + statut auth)
+  // ✅ Profil principal (catégories membres.html + statut auth + rôle)
   await db.ref("fts_users/" + id).update({
-    disciplines: cats,   // tableau pour le filtrage dans membres.html
+    disciplines: cats,
     status:      "active",
+    role:        role,
   });
 
   closeModModal();
