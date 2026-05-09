@@ -1,8 +1,8 @@
-const CACHE = 'fts-v4';
+const CACHE = 'fts-v5';
 const FILES = [
   './manifest.json',
-  './fts192.png',
-  './fts512.png',
+  './assets/img/fts192.png',
+  './assets/img/fts512.png',
   './forum.html'
 ];
 
@@ -25,7 +25,6 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // On ne cache que les requêtes GET (POST/PUT/etc. ne sont pas cachables)
   if(e.request.method !== 'GET') return;
   e.respondWith(
     fetch(e.request)
@@ -42,12 +41,11 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', function(event) {
   let data = { title: 'Fais Ton Show', body: 'Nouveau message', url: './forum.html' };
   try { if (event.data) data = event.data.json(); } catch(e) {}
-
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: './fts192.png',
-      badge: './fts192.png',
+      icon: './assets/img/fts192.png',
+      badge: './assets/img/fts192.png',
       vibrate: [200, 100, 200],
       data: { url: data.url || './forum.html' }
     })
