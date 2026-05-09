@@ -585,10 +585,20 @@ async function getSubscription(){
 async function checkNotifStatus(){
   const sub=await getSubscription();
   updateNotifBtn(!!sub);
-  // Affiche la bannière si pas abonné et pas refusée
   const banner=document.getElementById("notif-banner");
-  if(!sub && Notification.permission!=="denied" && !storageGet("fts_notif_dismissed")){
+  if(Notification.permission==="denied"){
+    // Notifications bloquées : affiche un message d'aide
     banner.classList.remove("hidden");
+    banner.querySelector(".notif-banner-title").textContent="Notifications bloquées";
+    banner.querySelector(".notif-banner-sub").textContent="Clique sur le 🔒 cadenas dans la barre d'adresse → Notifications → Autoriser";
+    banner.querySelector(".notif-banner-btn").style.display="none";
+    banner.querySelector(".notif-banner-icon").textContent="⚠️";
+  }else if(!sub && !storageGet("fts_notif_dismissed")){
+    banner.classList.remove("hidden");
+    banner.querySelector(".notif-banner-title").textContent="Ne rate aucun message !";
+    banner.querySelector(".notif-banner-sub").textContent="Active les notifications pour ton groupe";
+    banner.querySelector(".notif-banner-btn").style.display="";
+    banner.querySelector(".notif-banner-icon").textContent="🔔";
   }else{
     banner.classList.add("hidden");
   }
