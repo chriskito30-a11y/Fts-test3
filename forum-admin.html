@@ -8,103 +8,43 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-
-<!-- ✅ Design system partagé -->
 <link rel="stylesheet" href="assets/css/fts.css">
 
-<!-- Firebase SDK -->
+<!-- Firebase SDK — Auth ajouté -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-<!--
-  CSS SUPPRIMÉ car déjà dans fts.css :
-    reset, :root variables, html/body base,
-    .modal-overlay + .modal-overlay.hidden,
-    .pill-container,
-    .pill / .pill:hover / .pill.active
-      → forum-admin utilise border-radius:20px = valeur par défaut de fts.css,
-        aucun override nécessaire (contrairement à forum.html qui utilise 3px),
-    .status-badge / .status-pending / .status-active / .status-refused
-
-  CSS CONSERVÉ ici : tout ce qui est spécifique au dashboard admin.
--->
 <style>
 
-/* ── ÉCRAN DE CONNEXION ──────────────────────────────────────── */
-.login-screen {
+/* ── ÉCRAN CHARGEMENT AUTH ───────────────────────────────────── */
+.auth-loading {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1rem;
 }
-
-.login-box {
-  background: var(--grey);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 2.5rem;
-  width: 90%;
-  max-width: 360px;
-  text-align: center;
-}
-
-.login-logo {
+.auth-loading-logo {
   font-family: var(--font-display);
   font-size: 2rem;
   color: var(--red);
-  margin-bottom: .2rem;
 }
-
-.login-sub {
+.auth-loading-sub {
   font-size: .65rem;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 2rem;
-}
-
-.login-input {
-  width: 100%;
-  background: #0e0e0e;
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  color: var(--white);
-  font-family: var(--font-body);
-  font-size: .9rem;
-  padding: .75rem;
-  outline: none;
-  text-align: center;
+  color: var(--muted);
   letter-spacing: .15em;
-  margin-bottom: .6rem;
-  transition: border-color .2s;
-  -webkit-appearance: none;
-  appearance: none;
+  text-transform: uppercase;
 }
-
-.login-input:focus { border-color: var(--red); }
-
-.login-err {
-  font-size: .72rem;
-  color: var(--red);
-  min-height: 1rem;
-  margin-bottom: .5rem;
+.spinner {
+  width: 24px; height: 24px;
+  border: 2px solid #333;
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
 }
-
-.login-btn {
-  width: 100%;
-  background: var(--red);
-  border: none;
-  color: var(--white);
-  padding: .85rem;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  letter-spacing: .1em;
-  transition: background .2s;
-}
-
-.login-btn:hover { background: #b71815; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── DASHBOARD ───────────────────────────────────────────────── */
 .dashboard { display: none; min-height: 100vh; }
@@ -117,14 +57,8 @@
   align-items: center;
   justify-content: space-between;
 }
-
-.dash-logo {
-  font-family: var(--font-display);
-  font-size: 1.4rem;
-  color: var(--red);
-}
-
-.dash-sub { font-size: .65rem; color: var(--muted); margin-top: .1rem; }
+.dash-logo { font-family: var(--font-display); font-size: 1.4rem; color: var(--red); }
+.dash-sub  { font-size: .65rem; color: var(--muted); margin-top: .1rem; }
 
 .btn-logout {
   background: transparent;
@@ -137,7 +71,6 @@
   font-family: var(--font-body);
   transition: all .2s;
 }
-
 .btn-logout:hover { border-color: var(--red); color: var(--white); }
 
 /* ── ONGLETS ─────────────────────────────────────────────────── */
@@ -148,7 +81,6 @@
   display: flex;
   gap: 0;
 }
-
 .tab-btn {
   background: transparent;
   border: none;
@@ -163,15 +95,9 @@
   align-items: center;
   gap: .4rem;
 }
+.tab-btn:hover  { color: var(--white); }
+.tab-btn.active { border-bottom-color: var(--red); color: var(--white); }
 
-.tab-btn:hover     { color: var(--white); }
-.tab-btn.active    { border-bottom-color: var(--red); color: var(--white); }
-
-/*
-  .badge ici = compteur numérique sur les onglets (pastille rouge/verte).
-  DIFFÉRENT de .badge dans fts.css (label textuel).
-  Override nécessaire pour ce cas d'usage spécifique.
-*/
 .badge {
   background: var(--red);
   color: var(--white);
@@ -184,7 +110,7 @@
   text-transform: none;
 }
 
-/* ── CONTENU DU DASHBOARD ────────────────────────────────────── */
+/* ── CONTENU ─────────────────────────────────────────────────── */
 .dash-body { padding: 2rem; max-width: 900px; margin: 0 auto; }
 
 .tab-content        { display: none; }
@@ -212,192 +138,96 @@
   gap: 1rem;
   flex-wrap: wrap;
 }
-
 .user-avatar {
-  width: 40px;
-  height: 40px;
+  width: 40px; height: 40px;
   border-radius: 50%;
   background: var(--red);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--white);
-  flex-shrink: 0;
-  text-transform: uppercase;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; font-weight: 600; color: var(--white);
+  flex-shrink: 0; text-transform: uppercase;
 }
-
 .user-avatar.pending { background: var(--gold); }
 .user-avatar.refused { background: #444; }
-
-.user-info     { flex: 1; min-width: 150px; }
-.user-name     { font-size: .95rem; font-weight: 500; margin-bottom: .2rem; }
-.user-meta     { font-size: .72rem; color: var(--muted); }
-
-.user-group {
-  display: inline-block;
-  font-size: .65rem;
-  background: rgba(201,168,76,.1);
-  border: 1px solid rgba(201,168,76,.2);
-  color: var(--gold);
-  padding: .15rem .5rem;
-  border-radius: 2px;
-  margin-top: .2rem;
+.user-info   { flex: 1; min-width: 150px; }
+.user-name   { font-size: .95rem; font-weight: 500; margin-bottom: .2rem; }
+.user-meta   { font-size: .72rem; color: var(--muted); }
+.user-group  {
+  display: inline-block; font-size: .65rem;
+  background: rgba(201,168,76,.1); border: 1px solid rgba(201,168,76,.2);
+  color: var(--gold); padding: .15rem .5rem; border-radius: 2px; margin-top: .2rem;
 }
-
 .user-actions { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
-
 .btn-action {
-  padding: .4rem .8rem;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  font-family: var(--font-body);
-  font-size: .72rem;
-  border: 1px solid;
-  transition: all .2s;
+  padding: .4rem .8rem; border-radius: var(--r-sm);
+  cursor: pointer; font-family: var(--font-body); font-size: .72rem;
+  border: 1px solid; transition: all .2s;
 }
+.btn-approve { background: rgba(50,120,50,.15);  border-color: #2a5a2a; color: #6aba6a; }
+.btn-refuse  { background: rgba(120,30,30,.15);  border-color: #5a2020; color: #aa6060; }
+.btn-modify  { background: transparent;          border-color: #333;    color: var(--muted); }
+.btn-revoke  { background: transparent;          border-color: #5a2020; color: #aa5050; }
 
-.btn-approve { background: rgba(50,120,50,.15);   border-color: #2a5a2a; color: #6aba6a; }
-.btn-refuse  { background: rgba(120,30,30,.15);   border-color: #5a2020; color: #aa6060; }
-.btn-modify  { background: transparent;           border-color: #333;    color: var(--muted); }
-.btn-revoke  { background: transparent;           border-color: #5a2020; color: #aa5050; }
-
-/* ── MODALE MODIFICATION ─────────────────────────────────────────
-   .modal-overlay + .modal-overlay.hidden → fts.css ✅
-   .pill-container, .pill → fts.css ✅ (20px radius = valeur par défaut)
-──────────────────────────────────────────────────────────────── */
+/* ── MODALE MODIFICATION ─────────────────────────────────────── */
 .modal {
   background: var(--grey);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   padding: 2rem;
-  width: 95%;
-  max-width: 450px;
-  max-height: 85vh;
-  overflow-y: auto;
+  width: 95%; max-width: 450px;
+  max-height: 85vh; overflow-y: auto;
 }
-
-.modal h3 {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-}
-
+.modal h3 { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 1rem; }
 .modal-label {
-  font-size: .65rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  display: block;
-  margin-bottom: .5rem;
-  margin-top: 1rem;
+  font-size: .65rem; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .08em;
+  display: block; margin-bottom: .5rem; margin-top: 1rem;
 }
-
-/* Sous-groupes dans la modale (disciplines → créneaux) */
-.sub-group     { margin-bottom: .8rem; }
-
+.sub-group { margin-bottom: .8rem; }
 .sub-group-lbl {
-  font-size: .6rem;
-  letter-spacing: .15em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: .4rem;
-  display: flex;
-  align-items: center;
-  gap: .4rem;
+  font-size: .6rem; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: .4rem;
+  display: flex; align-items: center; gap: .4rem;
 }
-
-.sub-group-lbl::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.no-sub-note {
-  font-size: .7rem;
-  color: #555;
-  font-style: italic;
-  padding: .2rem 0;
-}
-
-/* Boutons de la modale */
+.sub-group-lbl::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.no-sub-note { font-size: .7rem; color: #555; font-style: italic; padding: .2rem 0; }
 .modal-row { display: flex; gap: .6rem; margin-top: 1.5rem; }
-
 .modal-row button {
-  flex: 1;
-  padding: .75rem;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  font-family: var(--font-body);
-  font-size: .8rem;
-  border: none;
-  transition: background .2s;
+  flex: 1; padding: .75rem; border-radius: var(--r-sm);
+  cursor: pointer; font-family: var(--font-body); font-size: .8rem;
+  border: none; transition: background .2s;
 }
-
 .btn-confirm       { background: var(--red);  color: var(--white); }
 .btn-confirm:hover { background: #b71815; }
 .btn-cancel        { background: #2a2a2a; color: var(--muted); }
 .btn-cancel:hover  { background: #333; color: var(--white); }
 
-/* ── ONGLET MESSAGES ─────────────────────────────────────────── */
+/* ── MESSAGES ────────────────────────────────────────────────── */
 .ch-selector { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.2rem; }
-
 .ch-tag {
-  background: #141414;
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: .35rem .8rem;
-  cursor: pointer;
-  font-size: .78rem;
-  color: var(--muted);
-  transition: all .2s;
-  font-family: var(--font-body);
+  background: #141414; border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: .35rem .8rem;
+  cursor: pointer; font-size: .78rem; color: var(--muted);
+  transition: all .2s; font-family: var(--font-body);
 }
-
 .ch-tag.active { border-color: var(--red); color: var(--white); background: rgba(212,32,26,.08); }
-
 .msg-item {
-  background: var(--grey);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: .8rem 1rem;
-  margin-bottom: .5rem;
-  display: flex;
-  align-items: flex-start;
-  gap: .8rem;
+  background: var(--grey); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: .8rem 1rem; margin-bottom: .5rem;
+  display: flex; align-items: flex-start; gap: .8rem;
 }
-
 .msg-body        { flex: 1; }
 .msg-author-name { font-size: .78rem; color: var(--gold); font-weight: 500; margin-bottom: .2rem; }
 .msg-text        { font-size: .82rem; color: var(--white); line-height: 1.5; }
 .msg-time        { font-size: .65rem; color: #555; margin-top: .2rem; }
-
 .btn-del {
-  background: transparent;
-  border: 1px solid #3a1a1a;
-  color: #aa5a5a;
-  padding: .3rem .6rem;
-  border-radius: 2px;
-  cursor: pointer;
-  font-size: .7rem;
-  flex-shrink: 0;
-  transition: all .2s;
-  font-family: var(--font-body);
+  background: transparent; border: 1px solid #3a1a1a; color: #aa5a5a;
+  padding: .3rem .6rem; border-radius: 2px; cursor: pointer;
+  font-size: .7rem; flex-shrink: 0; transition: all .2s; font-family: var(--font-body);
 }
-
 .btn-del:hover { background: rgba(212,32,26,.15); border-color: var(--red); }
 
-/* ── ÉTAT VIDE (message "aucun élément") ─────────────────────── */
-.empty-msg {
-  color: var(--muted);
-  font-size: .82rem;
-  padding: 1rem 0;
-  font-style: italic;
-}
+.empty-msg { color: var(--muted); font-size: .82rem; padding: 1rem 0; font-style: italic; }
 
-/* ── RESPONSIVE ──────────────────────────────────────────────── */
 @media (max-width: 600px) {
   .tabs-bar  { padding: 0 1rem; }
   .dash-body { padding: 1rem; }
@@ -408,15 +238,11 @@
 
 <body>
 
-<!-- ── ÉCRAN DE CONNEXION ─────────────────────────────────────── -->
-<div class="login-screen" id="login-screen">
-  <div class="login-box">
-    <div class="login-logo">FAIS TON SHOW</div>
-    <div class="login-sub">Admin Forum</div>
-    <input class="login-input" id="login-input" type="password" placeholder="Mot de passe…">
-    <div class="login-err" id="login-err"></div>
-    <button class="login-btn" onclick="doLogin()">Accéder</button>
-  </div>
+<!-- ── ÉCRAN DE CHARGEMENT AUTH ──────────────────────────────── -->
+<div class="auth-loading" id="auth-loading">
+  <div class="auth-loading-logo">FAIS TON SHOW</div>
+  <div class="spinner"></div>
+  <div class="auth-loading-sub">Vérification accès admin…</div>
 </div>
 
 <!-- ── DASHBOARD ─────────────────────────────────────────────── -->
@@ -460,18 +286,12 @@
 
 </div><!-- /dashboard -->
 
-<!-- ── MODALE MODIFICATION ────────────────────────────────────────
-     .modal-overlay + .hidden → fts.css ✅
-     .pill-container → fts.css ✅
-     .pill (border-radius:20px) → fts.css ✅ (pas d'override ici,
-       contrairement à forum.html qui utilise 3px)
-──────────────────────────────────────────────────────────────── -->
+<!-- ── MODALE MODIFICATION ────────────────────────────────────── -->
 <div class="modal-overlay hidden" id="mod-modal">
   <div class="modal">
     <h3>Modifier l'accès</h3>
     <input type="hidden" id="mod-uid">
     <label class="modal-label">Discipline(s) — clique pour sélectionner</label>
-    <!-- ✅ .pill-container → fts.css -->
     <div class="pill-container" id="mod-cat-pills"></div>
     <div id="mod-sub-groups"></div>
     <div class="modal-row">
@@ -482,103 +302,73 @@
 </div>
 
 
-<!-- ══ SCRIPTS ═══════════════════════════════════════════════════
-
-  Ordre de chargement :
-  1. Firebase SDK (chargé en <head>)
-  2. fts-utils.js  → FTS.esc, FTS.fetch, FTS.parseCSVRaw, FTS.store
-  3. fts-firebase.js → FTS.FIREBASE, FTS.SHEETS, FTS.initFirebase()
-  4. Script page    → logique admin (utilise FTS.* + firebase global)
-  5. fts-pwa.js     → SW registration
-
-═════════════════════════════════════════════════════════════════ -->
 <script src="assets/js/fts-utils.js"></script>
 <script src="assets/js/fts-firebase.js"></script>
 
 <script>
 /* ================================================================
-   FORUM-ADMIN.JS — Logique spécifique à l'interface admin
-
-   Remplacements opérés (fonctionnalités identiques) :
-
-   SUPPRIMÉ              → REMPLACÉ PAR
-   ─────────────────────────────────────────────────────────────
-   FIREBASE_CONFIG       → FTS.FIREBASE          (fts-firebase.js)
-   SHEET_URL             → FTS.SHEETS.ressources  (fts-firebase.js)
-   function esc()        → FTS.esc()              (fts-utils.js)
-   function initFirebase → renommée initDashboard()
-                           (conflit de nom avec FTS.initFirebase)
-                           + firebase.initializeApp → FTS.initFirebase()
-   fetch(SHEET_URL)      → FTS.fetch(FTS.SHEETS.ressources)
-   CSV parsing manuel    → FTS.parseCSVRaw()
-
-   Conservé (format différent de FTS.formatDateTime) :
-   function fmtDate()    → conservée locale (format court sans année)
+   FORUM-ADMIN.JS
+   ✅ Firebase Auth remplace ADMIN_PWD = "admin2026"
+   ✅ Double écriture fts_forum/users + fts_users à chaque action
+   ✅ Synchronisation complète disciplines ↔ membres.html
    ================================================================ */
 
-/* ── MOT DE PASSE ADMIN ──────────────────────────────────────── */
-const ADMIN_PWD = "admin2026";   // ⚠️ TODO → Firebase Auth
-
-/* ── ÉTAT ────────────────────────────────────────────────────── */
-let db, firebaseOk = false;
+let db, firebaseOk    = false;
 let allUsers          = {};
 let allGroups         = [];
 let currentMsgChannel = "general";
 
-/* ── UTILITAIRE DATE LOCAL ────────────────────────────────────────
-   Format court "jj/mm hh:mm" spécifique à cette page.
-   Différent de FTS.formatDateTime → conservé ici.
-──────────────────────────────────────────────────────────────── */
-function fmtDate(ts) {
-  return new Date(ts).toLocaleString("fr-FR", {
-    day:    "2-digit",
-    month:  "2-digit",
-    hour:   "2-digit",
-    minute: "2-digit",
-  });
-}
-
-/* ── INITIALISATION ──────────────────────────────────────────── */
+/* ── INIT ─────────────────────────────────────────────────────── */
 document.addEventListener("DOMContentLoaded", function() {
-  document.getElementById("login-input").addEventListener("keydown", function(e) {
-    if (e.key === "Enter") doLogin();
+
+  db = FTS.initFirebase();
+  if (db) firebaseOk = true;
+
+  firebase.auth().onAuthStateChanged(async function(user) {
+
+    if (!user) {
+      // Pas connecté → page de connexion
+      window.location.href = "auth.html";
+      return;
+    }
+
+    try {
+      // Vérifier le rôle admin dans RTDB
+      const snap    = await db.ref("fts_users/" + user.uid).once("value");
+      const profile = snap.val();
+
+      if (!profile || profile.role !== "admin") {
+        // Connecté mais pas admin → espace membre
+        window.location.href = "membres.html";
+        return;
+      }
+
+      // ✅ Admin confirmé — afficher le dashboard
+      document.getElementById("auth-loading").style.display = "none";
+      document.getElementById("dashboard").style.display    = "block";
+      await loadGroups();
+      listenUsers();
+      buildChannelSelector();
+
+    } catch(e) {
+      console.warn("[FTS Admin] Erreur :", e);
+      window.location.href = "auth.html";
+    }
   });
 });
 
-/* ── CONNEXION ───────────────────────────────────────────────── */
-function doLogin() {
-  if (document.getElementById("login-input").value === ADMIN_PWD) {
-    document.getElementById("login-screen").style.display = "none";
-    document.getElementById("dashboard").style.display   = "block";
-    initDashboard();
-  } else {
-    document.getElementById("login-err").textContent = "Mot de passe incorrect";
-  }
+/* ── DÉCONNEXION ─────────────────────────────────────────────── */
+function doLogout() {
+  firebase.auth().signOut().then(() => {
+    window.location.href = "auth.html";
+  });
 }
 
-function doLogout() { window.location.reload(); }
-
-/* ── INIT FIREBASE + DASHBOARD ────────────────────────────────────
-   Renommée initDashboard() pour éviter le conflit de nom avec
-   FTS.initFirebase() défini dans fts-firebase.js.
-   Comportement identique à l'original.
-──────────────────────────────────────────────────────────────── */
-async function initDashboard() {
-  // ✅ FTS.initFirebase() remplace firebase.initializeApp(FIREBASE_CONFIG) + firebase.database()
-  db = FTS.initFirebase();
-  if (db) firebaseOk = true;
-  await loadGroups();
-  listenUsers();
-  buildChannelSelector();
-}
-
-/* ── CHARGEMENT DES GROUPES ──────────────────────────────────── */
+/* ── CHARGEMENT GROUPES ──────────────────────────────────────── */
 async function loadGroups() {
   try {
-    // ✅ FTS.fetch() + FTS.SHEETS.ressources remplacent fetch(SHEET_URL)
     const r    = await FTS.fetch(FTS.SHEETS.ressources);
     const text = await r.text();
-    // ✅ FTS.parseCSVRaw() remplace le parsing manuel plus fragile
     const rows = FTS.parseCSVRaw(text);
     allGroups  = rows.map(row => ({
       cat: (row[0] || "").trim(),
@@ -587,7 +377,7 @@ async function loadGroups() {
   } catch(e) {}
 }
 
-/* ── ÉCOUTE TEMPS RÉEL DES UTILISATEURS ─────────────────────── */
+/* ── ÉCOUTE TEMPS RÉEL ───────────────────────────────────────── */
 function listenUsers() {
   db.ref("fts_forum/users").on("value", function(snap) {
     allUsers = snap.val() || {};
@@ -596,13 +386,13 @@ function listenUsers() {
   });
 }
 
-/* ── RENDU : INSCRIPTIONS EN ATTENTE ─────────────────────────── */
+/* ── RENDU : EN ATTENTE ──────────────────────────────────────── */
 function renderPending() {
   const pending = Object.entries(allUsers).filter(([id, u]) => u.status === "pending");
   document.getElementById("badge-pending").textContent = pending.length;
   const list = document.getElementById("pending-list");
 
-  if (pending.length === 0) {
+  if (!pending.length) {
     list.innerHTML = '<div class="empty-msg">Aucune demande en attente.</div>';
     return;
   }
@@ -614,7 +404,7 @@ function renderPending() {
         <div class="user-name">${FTS.esc(u.name)}</div>
         <div class="user-meta">${fmtDate(u.ts)}</div>
         <div class="user-group">
-          ${FTS.esc(u.group)}${u.subgroup ? " — " + FTS.esc(u.subgroup) : ""}
+          ${FTS.esc(u.group || "Aucune discipline")}${u.subgroup ? " — " + FTS.esc(u.subgroup) : ""}
         </div>
       </div>
       <div class="user-actions">
@@ -636,15 +426,14 @@ function renderMembers() {
   const list = document.getElementById("members-list");
   list.innerHTML = members.map(([id, u]) => `
     <div class="user-card">
-      <div class="user-avatar ${u.status === 'refused' ? 'refused' : ''}">${FTS.esc(u.name.charAt(0))}</div>
+      <div class="user-avatar ${u.status === "refused" ? "refused" : ""}">${FTS.esc(u.name.charAt(0))}</div>
       <div class="user-info">
         <div class="user-name">
           ${FTS.esc(u.name)}
-          <!-- ✅ .status-badge + .status-* → fts.css -->
           <span class="status-badge status-${u.status}">${u.status}</span>
         </div>
         <div class="user-group">
-          ${FTS.esc(u.group)}${u.subgroup ? " — " + FTS.esc(u.subgroup) : ""}
+          ${FTS.esc(u.group || "—")}${u.subgroup ? " — " + FTS.esc(u.subgroup) : ""}
         </div>
       </div>
       <div class="user-actions">
@@ -654,23 +443,40 @@ function renderMembers() {
     </div>`).join("");
 }
 
-/* ── ACTIONS UTILISATEURS ────────────────────────────────────── */
-function approveUser(id) { db.ref("fts_forum/users/" + id + "/status").set("active"); }
-function refuseUser(id)  { if (confirm("Refuser cet utilisateur ?"))  db.ref("fts_forum/users/" + id + "/status").set("refused"); }
-function revokeUser(id)  { if (confirm("Révoquer cet utilisateur ?")) db.ref("fts_forum/users/" + id + "/status").set("refused"); }
+/* ── ACTIONS UTILISATEURS ────────────────────────────────────────
+   ✅ Double écriture : fts_forum/users + fts_users
+   C'est ce qui synchronise membres.html et forum.html
+─────────────────────────────────────────────────────────────── */
+async function approveUser(id) {
+  // Forum : statut actif
+  await db.ref("fts_forum/users/" + id + "/status").set("active");
+  // Espace membre : statut actif (débloque l'accès auth.html → membres.html)
+  await db.ref("fts_users/" + id + "/status").set("active");
+}
+
+async function refuseUser(id) {
+  if (!confirm("Refuser cet utilisateur ?")) return;
+  await db.ref("fts_forum/users/" + id + "/status").set("refused");
+  await db.ref("fts_users/" + id + "/status").set("refused");
+}
+
+async function revokeUser(id) {
+  if (!confirm("Révoquer cet utilisateur ?")) return;
+  await db.ref("fts_forum/users/" + id + "/status").set("refused");
+  await db.ref("fts_users/" + id + "/status").set("refused");
+}
 
 /* ── MODALE MODIFICATION ─────────────────────────────────────── */
 function openModModal(id) {
-  const u      = allUsers[id];
-  const uCats  = (u.group    || "").split(", ").filter(Boolean);
-  const uSubs  = (u.subgroup || "").split(", ").filter(Boolean);
-  const cats   = [...new Set(allGroups.map(g => g.cat))];
+  const u     = allUsers[id];
+  const uCats = (u.group    || "").split(", ").filter(Boolean);
+  const uSubs = (u.subgroup || "").split(", ").filter(Boolean);
+  const cats  = [...new Set(allGroups.map(g => g.cat))];
 
   document.getElementById("mod-uid").value = id;
 
-  // ✅ FTS.esc() remplace esc()
   document.getElementById("mod-cat-pills").innerHTML = cats.map(c =>
-    `<div class="pill ${uCats.includes(c) ? 'active' : ''}" onclick="toggleModPill(this,'cat')">${FTS.esc(c)}</div>`
+    `<div class="pill ${uCats.includes(c) ? "active" : ""}" onclick="toggleModPill(this,'cat')">${FTS.esc(c)}</div>`
   ).join("");
 
   updateModSubGroups(uSubs);
@@ -679,7 +485,7 @@ function openModModal(id) {
 
 function toggleModPill(el, type) {
   el.classList.toggle("active");
-  if (type === 'cat') {
+  if (type === "cat") {
     const activeSubs = Array.from(document.querySelectorAll(".mod-sub-pills .pill.active")).map(p => p.textContent);
     updateModSubGroups(activeSubs);
   }
@@ -703,22 +509,31 @@ function updateModSubGroups(selectedSubs) {
               <div class="sub-group-lbl">${FTS.esc(cat)}</div>
               <div class="pill-container mod-sub-pills">
                 ${subs.map(s =>
-                  `<div class="pill ${selectedSubs.includes(s) ? 'active' : ''}" onclick="toggleModPill(this,'sub')">${FTS.esc(s)}</div>`
+                  `<div class="pill ${selectedSubs.includes(s) ? "active" : ""}" onclick="toggleModPill(this,'sub')">${FTS.esc(s)}</div>`
                 ).join("")}
               </div>
             </div>`;
   }).join("");
 }
 
-function saveModification() {
+async function saveModification() {
   const id   = document.getElementById("mod-uid").value;
   const cats = Array.from(document.querySelectorAll("#mod-cat-pills .pill.active")).map(p => p.textContent);
   const subs = Array.from(document.querySelectorAll(".mod-sub-pills .pill.active")).map(p => p.textContent);
-  db.ref("fts_forum/users/" + id).update({
+
+  // ✅ Forum profile (canaux forum.html)
+  await db.ref("fts_forum/users/" + id).update({
     group:    cats.join(", "),
     subgroup: subs.join(", "),
     status:   "active",
   });
+
+  // ✅ Profil principal (catégories membres.html + statut auth)
+  await db.ref("fts_users/" + id).update({
+    disciplines: cats,   // tableau pour le filtrage dans membres.html
+    status:      "active",
+  });
+
   closeModModal();
 }
 
@@ -731,7 +546,7 @@ function buildChannelSelector() {
       .filter((v, i, a) => a.indexOf(v) === i);
 
     document.getElementById("ch-selector").innerHTML = channels.map(c =>
-      `<div class="ch-tag ${c === currentMsgChannel ? 'active' : ''}" onclick="loadMsgChannel('${c}')">${c}</div>`
+      `<div class="ch-tag ${c === currentMsgChannel ? "active" : ""}" onclick="loadMsgChannel('${c}')">${c}</div>`
     ).join("");
 
     loadMsgChannel(currentMsgChannel);
@@ -750,7 +565,6 @@ function loadMsgChannel(ch) {
       list.innerHTML = '<div class="empty-msg">Aucun message dans ce canal.</div>';
       return;
     }
-    // ✅ FTS.esc() remplace esc()
     list.innerHTML = Object.entries(snap.val()).reverse().map(([mid, m]) => `
       <div class="msg-item">
         <div class="msg-body">
@@ -777,9 +591,16 @@ function showTab(id, btn) {
   document.getElementById("tab-" + id).classList.add("active");
   btn.classList.add("active");
 }
+
+/* ── UTILITAIRE DATE ─────────────────────────────────────────── */
+function fmtDate(ts) {
+  return new Date(ts).toLocaleString("fr-FR", {
+    day: "2-digit", month: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
 </script>
 
-<!-- ✅ fts-pwa.js → SW registration (pas d'install bar sur cette page) -->
 <script src="assets/js/fts-pwa.js"></script>
 
 </body>
