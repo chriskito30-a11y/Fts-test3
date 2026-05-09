@@ -10,25 +10,25 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "./fts192.png",
+      "src": "./assets/img/fts192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./fts192.png",
+      "src": "./assets/img/fts192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "./fts512.png",
+      "src": "./assets/img/fts512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./fts512.png",
+      "src": "./assets/img/fts512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
