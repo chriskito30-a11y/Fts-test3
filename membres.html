@@ -59,6 +59,17 @@
 /* Espace sous le contenu pour la nav fixe */
 .bnav-spacer { height: 72px; }
 
+/* Badge non lus sur nav */
+.bnav-icon-wrap { position: relative; display: inline-block; line-height: 1; }
+.bnav-badge {
+  position: absolute; top: -5px; right: -8px;
+  background: var(--red); color: #fff;
+  font-size: .5rem; font-weight: 700;
+  min-width: 14px; height: 14px; padding: 0 3px;
+  border-radius: 7px; text-align: center; line-height: 14px;
+  border: 2px solid #0d0d0d; display: none;
+}
+
 /* ── SECTION ÉVÉNEMENTS ──────────────────────────────────────── */
 .evt-sec {
   background: var(--grey);
@@ -314,7 +325,11 @@
       <span class="bnav-icon">👤</span><span>Membres</span>
     </a>
     <a href="messages.html" class="bnav-item">
-      <span class="bnav-icon">✉️</span><span>Messages</span>
+      <span class="bnav-icon-wrap">
+        <span class="bnav-icon">✉️</span>
+        <span class="bnav-badge" id="msg-badge">0</span>
+      </span>
+      <span>Messages</span>
     </a>
     <a href="forum.html" class="bnav-item">
       <span class="bnav-icon">💬</span><span>Forum</span>
@@ -498,6 +513,9 @@ const ICONS = {
 
       // Filtrage des catégories selon les disciplines
       applyDisciplineFilter(userProfile);
+
+      // Badge non lus messages
+      listenUnreadBadge(user.uid);
 
       // Chargement des données
       loadEvts();
@@ -758,6 +776,31 @@ async function loadAnnonce() {
     }
   } catch(e) {
     // Annonce optionnelle — ignoré silencieusement
+  }
+}
+
+/* ── BADGE NON LUS MESSAGES ──────────────────────────────────── */
+function listenUnreadBadge(uid) {
+  db.ref('fts_dm/userConvs/' + uid).on('value', async snap => {
+    const convIds = snap.val() ? Object.keys(snap.val()) : [];
+    if (!convIds.length) { updateMsgBadge(0); return; }
+    let total = 0;
+    await Promise.all(convIds.map(id =>
+      db.ref('fts_dm/conversations/' + id + '/unread/' + uid).once('value')
+        .then(s => { total += (s.val() || 0); })
+    ));
+    updateMsgBadge(total);
+  });
+}
+
+function updateMsgBadge(count) {
+  const el = document.getElementById('msg-badge');
+  if (!el) return;
+  if (count > 0) {
+    el.textContent = count > 99 ? '99+' : count;
+    el.style.display = 'inline-block';
+  } else {
+    el.style.display = 'none';
   }
 }
 
