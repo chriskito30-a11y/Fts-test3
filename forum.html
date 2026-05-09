@@ -50,6 +50,7 @@ html,body{height:100%;background:var(--black);color:var(--white);font-family:"DM
 .back-link:hover{color:var(--muted)}
 .btn-signout-forum{background:transparent;border:1px solid #222;color:#444;padding:.35rem .7rem;border-radius:2px;cursor:pointer;font-size:.65rem;font-family:"DM Sans",sans-serif;transition:all .2s;text-align:left}
 .btn-signout-forum:hover{border-color:var(--red);color:var(--red)}
+.msg-badge-inline{background:var(--red);color:#fff;font-size:.5rem;font-weight:700;min-width:14px;height:14px;padding:0 3px;border-radius:7px;text-align:center;line-height:14px;display:none;margin-left:.3rem;vertical-align:middle}
 
 /* Main */
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
@@ -174,7 +175,7 @@ html,body{height:100%;background:var(--black);color:var(--white);font-family:"DM
     <div class="sidebar-footer">
       <button class="btn-notif" id="btn-notif" onclick="toggleNotifications()">🔕 Activer les notifs</button>
       <a class="back-link" href="membres.html">← Espace membres</a>
-      <a class="back-link" href="messages.html">✉️ Messages privés</a>
+      <a class="back-link" href="messages.html">✉️ Messages privés <span class="msg-badge-inline" id="msg-badge">0</span></a>
       <button class="btn-signout-forum" onclick="doSignOut()">Déconnexion</button>
     </div>
   </div>
@@ -315,6 +316,9 @@ document.addEventListener("DOMContentLoaded", async function() {
 
       // 3. Charger ou créer le profil forum (fts_forum/users)
       await loadUserData();
+
+      // Badge non lus messages privés
+      listenUnreadBadge(uid);
 
       // 4. Afficher l'app
       document.getElementById("auth-loading").style.display = "none";
@@ -483,6 +487,26 @@ function exitAdmin() {
   document.getElementById("admin-bar").classList.remove("show");
   document.getElementById("btn-gear").classList.remove("active");
   switchChannel(currentChannel);
+}
+
+/* ── BADGE NON LUS ────────────────────────────────────────────── */
+function listenUnreadBadge(uid) {
+  db.ref('fts_dm/userConvs/' + uid).on('value', async snap => {
+    const convIds = snap.val() ? Object.keys(snap.val()) : [];
+    if (!convIds.length) { updateMsgBadge(0); return; }
+    let total = 0;
+    await Promise.all(convIds.map(id =>
+      db.ref('fts_dm/conversations/' + id + '/unread/' + uid).once('value')
+        .then(s => { total += (s.val() || 0); })
+    ));
+    updateMsgBadge(total);
+  });
+}
+function updateMsgBadge(count) {
+  const el = document.getElementById('msg-badge');
+  if (!el) return;
+  if (count > 0) { el.textContent = count > 99 ? '99+' : count; el.style.display = 'inline-block'; }
+  else { el.style.display = 'none'; }
 }
 
 /* ── DÉCONNEXION ─────────────────────────────────────────────── */
