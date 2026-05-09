@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saison 2026/2027 — Fais Ton Show</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
+<!-- Design system partagé -->
+<link rel="stylesheet" href="assets/css/fts.css">
+
+<!-- Styles spécifiques à saison.html -->
+<style>
+/* Parcours loisir / performance */
+.parcours {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .8rem;
+  margin-bottom: 2.5rem;
+}
+
+.p-card {
+  background: var(--grey);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 1.2rem 1.4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.p-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+
+.p-card.loisir::before { background: var(--gold); }
+.p-card.perf::before   { background: var(--red); }
+
+.p-tag {
+  font-size: .55rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  font-weight: 500;
+  margin-bottom: .4rem;
+}
+
+.p-card.loisir .p-tag { color: var(--gold); }
+.p-card.perf   .p-tag { color: var(--red);  }
+
+.p-icon  { font-size: 1.4rem; margin-bottom: .4rem; display: block; }
+.p-title { font-family: var(--font-display); font-size: 1.25rem; margin-bottom: .3rem; }
+.p-desc  { font-size: .78rem; color: var(--muted); line-height: 1.5; }
+
+/* Tuiles disciplines */
+.tiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.tile {
+  background: var(--grey);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 1.5rem 1rem 1.6rem;
+  cursor: pointer;
+  transition: all .22s;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  color: var(--white);
+  font-family: var(--font-body);
+  width: 155px;
+}
+
+.tile::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  background: var(--red);
+  transition: width .2s;
+}
+
+.tile:hover::before,
+.tile.open::before { width: 3px; }
+
+.tile:hover,
+.tile.open { border-color: #3a3a3a; background: #202020; transform: translateY(-2px); }
+
+.tile.open { border-color: rgba(212,32,26,.35); }
+
+.tile-icon  { font-size: 2rem; display: block; margin-bottom: .6rem; }
+.tile-name  { font-family: var(--font-display); font-size: 1.1rem; letter-spacing: .04em; line-height: 1.1; color: var(--white); }
+.tile-sub   { font-size: .62rem; color: var(--muted); margin-top: .3rem; }
+
+.tile-badge {
+  display: inline-block;
+  font-size: .5rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  background: rgba(201,168,76,.12);
+  color: var(--gold);
+  border: 1px solid rgba(201,168,76,.3);
+  border-radius: 2px;
+  padding: .15rem .4rem;
+  margin-top: .45rem;
+}
+
+.tile-arrow {
+  position: absolute;
+  bottom: .45rem;
+  right: .65rem;
+  font-size: .6rem;
+  color: var(--muted);
+  transition: transform .2s, color .2s;
+}
+
+.tile.open .tile-arrow { transform: rotate(180deg); color: var(--red); }
+
+/* Panels de détail */
+.panel {
+  display: none;
+  background: var(--grey);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  animation: slideDown .25s ease;
+}
+
+.panel.open { display: block; }
+
+.panel-hdr {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.4rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-icon  { font-size: 2rem; }
+.panel-title { font-family: var(--font-display); font-size: 1.6rem; }
+.panel-body  { padding: 1.4rem 1.5rem; }
+
+/* Onglets loisir / performance */
+.tabs { display: flex; gap: .4rem; margin-bottom: 1.2rem; }
+
+.tab {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: .45rem 1rem;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: .78rem;
+  transition: all .18s;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+.tab:hover { border-color: #444; color: var(--white); }
+
+.tab.act.loisir { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,.07); }
+.tab.act.perf   { border-color: var(--red);  color: var(--white); background: rgba(212,32,26,.08); }
+
+.tab-content     { display: none; }
+.tab-content.act { display: block; animation: fadeIn .2s ease; }
+
+/* Contenu des panels */
+.c-main {
+  font-size: .9rem;
+  color: var(--white);
+  margin-bottom: 1rem;
+  padding: .9rem 1.1rem;
+  background: #141414;
+  border-left: 3px solid var(--gold);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  line-height: 1.6;
+}
+
+.c-main.perf { border-left-color: var(--red); }
+
+.c-list { list-style: none; display: flex; flex-direction: column; gap: .5rem; }
+
+.c-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  font-size: .82rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.c-list li .icon { flex-shrink: 0; margin-top: .05rem; }
+.c-list li.incl  .icon { color: var(--gold); }
+.c-list li.gift         { color: var(--white); }
+.c-list li.gift  .icon  { color: var(--red); }
+.c-list li.warn         { color: var(--white); }
+.c-list li.warn  .icon  { color: var(--gold); }
+
+/* Responsive */
+@media (max-width: 560px) {
+  .parcours { grid-template-columns: 1fr; }
+  .tile { width: calc(50% - .5rem); }
+  .panel-hdr, .panel-body { padding: 1rem 1.2rem; }
+  .tabs { flex-wrap: wrap; }
+}
+</style>
+</head>
+
+<body class="has-glow">
+<div class="wrap wrap-xl">
+
+  <div class="page-hdr">
+    <div class="eyebrow">Association culturelle</div>
+    <h1>SAISON<br><span>2026/2027</span></h1>
+    <div class="title-line"></div>
+    <p class="page-slogan">Deux parcours, une passion — trouvez votre place sur scène</p>
+  </div>
+
+  <div class="section-lbl">Deux parcours selon vos envies</div>
+  <div class="parcours">
+    <div class="p-card loisir">
+      <span class="p-icon">🎈</span>
+      <div class="p-tag">Parcours Loisir</div>
+      <div class="p-title">À ton rythme</div>
+      <p class="p-desc">1 cours hebdomadaire pour découvrir, s'amuser et progresser librement.</p>
+    </div>
+    <div class="p-card perf">
+      <span class="p-icon">🚀</span>
+      <div class="p-tag">Parcours Performance</div>
+      <div class="p-title">Aller plus loin</div>
+      <p class="p-desc">Plus de technique, plusieurs spectacles dans l'année — et l'Atelier Improvisation offert toute l'année.</p>
+    </div>
+  </div>
+
+  <div class="section-lbl">Choisissez votre discipline</div>
+  <div class="tiles">
+    <button class="tile" data-id="theatre" onclick="toggle('theatre')">
+      <span class="tile-icon">🎭</span>
+      <div class="tile-name">Théâtre</div>
+      <div class="tile-sub">Mercredi · Lundi</div>
+      <span class="tile-arrow">▼</span>
+    </button>
+    <button class="tile" data-id="danse" onclick="toggle('danse')">
+      <span class="tile-icon">💃</span>
+      <div class="tile-name">Danse</div>
+      <div class="tile-sub">Mardi · Jeudi</div>
+      <span class="tile-arrow">▼</span>
+    </button>
+    <button class="tile" data-id="musique" onclick="toggle('musique')">
+      <span class="tile-icon">🎸</span>
+      <div class="tile-name">Musique & Chant</div>
+      <div class="tile-sub">Individuel + ateliers</div>
+      <span class="tile-arrow">▼</span>
+    </button>
+    <button class="tile" data-id="singer" onclick="toggle('singer')">
+      <span class="tile-icon">🎶</span>
+      <div class="tile-name">Singer Academy</div>
+      <div class="tile-sub">Vendredi · Mercredi</div>
+      <span class="tile-arrow">▼</span>
+    </button>
+    <button class="tile" data-id="comedie" onclick="toggle('comedie')">
+      <span class="tile-icon">🎬</span>
+      <div class="tile-name">Comédie Musicale</div>
+      <div class="tile-sub">Tous âges</div>
+      <span class="tile-arrow">▼</span>
+    </button>
+    <button class="tile" data-id="singershow" onclick="toggle('singershow')">
+      <span class="tile-icon">🌟</span>
+      <div class="tile-name">Singer Show</div>
+      <div class="tile-sub">Option Musique & Chant</div>
+      <span class="tile-arrow">▼</span>
+    </button>
+    <button class="tile" data-id="formation" onclick="toggle('formation')">
+      <span class="tile-icon">🎼</span>
+      <div class="tile-name">Formation Musicale</div>
+      <div class="tile-sub">Option Musique & Chant</div>
+      <span class="tile-arrow">▼</span>
+    </button>
+    <button class="tile" data-id="atelier" onclick="toggle('atelier')">
+      <span class="tile-icon">🎨</span>
+      <div class="tile-name">Atelier Créatif</div>
+      <div class="tile-sub">Inclus Performance</div>
+      <span class="tile-badge">Offert</span>
+      <span class="tile-arrow">▼</span>
+    </button>
+  </div>
+
+  <!-- THÉÂTRE -->
+  <div class="panel" id="panel-theatre">
+    <div class="panel-hdr"><span class="panel-icon">🎭</span><div><div class="panel-title">Théâtre</div></div></div>
+    <div class="panel-body">
+      <div class="tabs">
+        <button class="tab act loisir" onclick="switchTab('theatre','loisir',this)">🎈 Loisir</button>
+        <button class="tab perf"       onclick="switchTab('theatre','perf',this)">🚀 Performance</button>
+      </div>
+      <div class="tab-content act" id="theatre-loisir">
+        <div class="c-main">1 cours hebdomadaire le <strong>mercredi</strong>.</div>
+        <ul class="c-list">
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers de théâtre dans la saison inclus</span></li>
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers d'expression corporelle inclus</span></li>
+        </ul>
+      </div>
+      <div class="tab-content" id="theatre-perf">
+        <div class="c-main perf">1 cours hebdomadaire le <strong>mercredi</strong> + entraînements supplémentaires.</div>
+        <ul class="c-list">
+          <li class="incl"><span class="icon">⚡</span><span>Nouveau : entraînement jeudi dès octobre</span></li>
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers de théâtre le mercredi inclus</span></li>
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers de rythme avec la Singer Academy Performance inclus</span></li>
+          <li class="gift"><span class="icon">🎁</span><span><strong>Offert :</strong> Atelier Improvisation toute l'année</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- DANSE -->
+  <div class="panel" id="panel-danse">
+    <div class="panel-hdr"><span class="panel-icon">💃</span><div><div class="panel-title">Danse</div></div></div>
+    <div class="panel-body">
+      <div class="tabs">
+        <button class="tab act loisir" onclick="switchTab('danse','loisir',this)">🎈 Loisir</button>
+        <button class="tab perf"       onclick="switchTab('danse','perf',this)">🚀 Performance</button>
+      </div>
+      <div class="tab-content act" id="danse-loisir">
+        <div class="c-main">1 cours hebdomadaire. Groupes : Baby Show, Junior, Ados/Adultes.</div>
+      </div>
+      <div class="tab-content" id="danse-perf">
+        <div class="c-main perf">1 cours hebdomadaire + répétitions spectacles.</div>
+        <ul class="c-list">
+          <li class="incl"><span class="icon">✔</span><span>Répétitions et préparations spectacles incluses</span></li>
+          <li class="gift"><span class="icon">🎁</span><span><strong>Offert :</strong> Atelier Improvisation toute l'année</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- MUSIQUE & CHANT -->
+  <div class="panel" id="panel-musique">
+    <div class="panel-hdr"><span class="panel-icon">🎸</span><div><div class="panel-title">Musique & Chant</div></div></div>
+    <div class="panel-body">
+      <div class="tabs">
+        <button class="tab act loisir" onclick="switchTab('musique','loisir',this)">🎈 Loisir</button>
+        <button class="tab perf"       onclick="switchTab('musique','perf',this)">🚀 Performance</button>
+      </div>
+      <div class="tab-content act" id="musique-loisir">
+        <div class="c-main">1 cours individuel hebdomadaire.</div>
+      </div>
+      <div class="tab-content" id="musique-perf">
+        <div class="c-main perf">1 cours individuel hebdomadaire + ateliers musicaux partagés.</div>
+        <ul class="c-list">
+          <li class="incl"><span class="icon">✔</span><span>Ateliers partagés avec les autres musiciens pour préparer les concerts</span></li>
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers de création d'harmonies avec la Singer Academy inclus</span></li>
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers de théâtre le mercredi inclus</span></li>
+          <li class="gift"><span class="icon">🎁</span><span><strong>Offert :</strong> Atelier Improvisation toute l'année</span></li>
+          <hr class="divider-solid">
+          <li class="warn"><span class="icon">💰</span><span>Options payantes en supplément : <strong>Formation Musicale</strong> ou <strong>Singer Show</strong></span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SINGER ACADEMY -->
+  <div class="panel" id="panel-singer">
+    <div class="panel-hdr"><span class="panel-icon">🎶</span><div><div class="panel-title">Singer Academy</div></div></div>
+    <div class="panel-body">
+      <div class="tabs">
+        <button class="tab act loisir" onclick="switchTab('singer','loisir',this)">🎈 Loisir</button>
+        <button class="tab perf"       onclick="switchTab('singer','perf',this)">🚀 Performance</button>
+      </div>
+      <div class="tab-content act" id="singer-loisir">
+        <div class="c-main">1 cours de base le <strong>vendredi soir</strong>.</div>
+        <ul class="c-list">
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers de théâtre le mercredi inclus</span></li>
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers d'expression corporelle le mardi inclus</span></li>
+        </ul>
+      </div>
+      <div class="tab-content" id="singer-perf">
+        <div class="c-main perf">1 cours hebdomadaire le <strong>mercredi soir</strong>.</div>
+        <ul class="c-list">
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers de théâtre le mercredi inclus</span></li>
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers d'expression corporelle le mardi inclus</span></li>
+          <li class="gift"><span class="icon">🎁</span><span><strong>Offert :</strong> Atelier Improvisation toute l'année</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMÉDIE MUSICALE -->
+  <div class="panel" id="panel-comedie">
+    <div class="panel-hdr"><span class="panel-icon">🎬</span><div><div class="panel-title">Comédie Musicale</div></div></div>
+    <div class="panel-body">
+      <div class="tabs">
+        <button class="tab act loisir" onclick="switchTab('comedie','loisir',this)">🎭 Kids / Loisir</button>
+        <button class="tab perf"       onclick="switchTab('comedie','perf',this)">🚀 Performance</button>
+      </div>
+      <div class="tab-content act" id="comedie-loisir">
+        <div class="c-main">1 cours hebdomadaire adapté à l'âge.<br><span style="font-size:.8rem;color:var(--muted)">Découverte ludique du chant, du théâtre et de la danse.</span></div>
+      </div>
+      <div class="tab-content" id="comedie-perf">
+        <div class="c-main perf">1 cours hebdomadaire adapté à l'âge.</div>
+        <ul class="c-list">
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers d'expression corporelle inclus</span></li>
+          <li class="incl"><span class="icon">✔</span><span>Plusieurs ateliers de rythme avec la Singer Academy Performance inclus</span></li>
+          <li class="gift"><span class="icon">🎁</span><span><strong>Offert :</strong> Atelier Improvisation toute l'année</span></li>
+        </ul>
+        <hr class="divider">
+        <p style="font-size:.8rem;color:var(--muted);font-style:italic">Objectif : devenir un artiste complet, monter sur scène et partager l'esprit Fais Ton Show !</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SINGER SHOW -->
+  <div class="panel" id="panel-singershow">
+    <div class="panel-hdr"><span class="panel-icon">🌟</span><div><div class="panel-title">Singer Show</div></div></div>
+    <div class="panel-body">
+      <div class="c-main">Option payante en supplément, <strong>réservée aux élèves déjà inscrits en Musique & Chant</strong>.</div>
+      <ul class="c-list">
+        <li class="incl"><span class="icon">✔</span><span>Cours dédié à la performance scénique vocale</span></li>
+        <li class="incl"><span class="icon">✔</span><span>Travail sur la présence scénique, le jeu et l'interprétation</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- FORMATION MUSICALE -->
+  <div class="panel" id="panel-formation">
+    <div class="panel-hdr"><span class="panel-icon">🎼</span><div><div class="panel-title">Formation Musicale</div></div></div>
+    <div class="panel-body">
+      <div class="c-main">Option payante en supplément, <strong>réservée aux élèves déjà inscrits en Musique & Chant</strong>.</div>
+      <ul class="c-list">
+        <li class="incl"><span class="icon">✔</span><span>Théorie musicale, lecture de partitions, solfège</span></li>
+        <li class="incl"><span class="icon">✔</span><span>Approfondit la compréhension de la musique pour progresser plus vite</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ATELIER CRÉATIF -->
+  <div class="panel" id="panel-atelier">
+    <div class="panel-hdr"><span class="panel-icon">🎨</span><div><div class="panel-title">Atelier Créatif / Improvisation</div></div></div>
+    <div class="panel-body">
+      <div class="c-main">Inclus automatiquement dans tous les <strong>Parcours Performance</strong>.</div>
+      <ul class="c-list">
+        <li class="gift"><span class="icon">🎁</span><span>Offert toute l'année pour tous les élèves Performance</span></li>
+        <li class="incl"><span class="icon">✔</span><span>Improvisation théâtrale, créativité, expression libre</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <footer class="page-footer">
+    Fais Ton Show — Association culturelle &nbsp;·&nbsp;
+    <a href="index.html">Retour au questionnaire</a> &nbsp;·&nbsp;
+    <a href="membres.html">Espace membres</a>
+  </footer>
+
+</div>
+
+<script src="assets/js/fts-utils.js"></script>
+<script>
+var current = null;
+
+function toggle(id) {
+  var tile  = document.querySelector('[data-id="' + id + '"]');
+  var panel = document.getElementById('panel-' + id);
+  if (current && current !== id) {
+    document.querySelector('[data-id="' + current + '"]').classList.remove('open');
+    document.getElementById('panel-' + current).classList.remove('open');
+  }
+  if (current === id) {
+    tile.classList.remove('open');
+    panel.classList.remove('open');
+    current = null;
+  } else {
+    tile.classList.add('open');
+    panel.classList.add('open');
+    current = id;
+    setTimeout(function() {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  }
+}
+
+function switchTab(disc, parcours, btn) {
+  var panel = document.getElementById('panel-' + disc);
+  panel.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('act'); });
+  panel.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('act'); });
+  btn.classList.add('act');
+  document.getElementById(disc + '-' + parcours).classList.add('act');
+}
+</script>
+</body>
+</html>

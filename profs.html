@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Espace Profs — Fais Ton Show</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- Design system partagé -->
+<link rel="stylesheet" href="assets/css/fts.css">
+
+<!-- Styles spécifiques à profs.html -->
+<style>
+/* Drop zone upload */
+#drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--r-sm);
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+#drop-zone:hover,
+#drop-zone.dragover { border-color: var(--red); color: var(--white); }
+
+#drop-zone.dragover { background: rgba(201,168,76,.05); border-color: var(--gold); }
+
+/* Barre de progression upload */
+.upload-progress-bar {
+  background: var(--border);
+  border-radius: 2px;
+  height: 4px;
+  overflow: hidden;
+  margin-top: .5rem;
+}
+
+.upload-progress-fill {
+  background: var(--red);
+  height: 100%;
+  width: 0%;
+  transition: width .3s;
+}
+
+.upload-progress-text {
+  font-size: .72rem;
+  margin-top: .4rem;
+  color: var(--gold);
+}
+
+/* Formulaire caché avant auth */
+#form-card { display: none; }
+</style>
+</head>
+
+<body class="has-topbar has-glow">
+<div class="wrap wrap-sm">
+
+  <div class="page-hdr">
+    <div class="eyebrow">Fais Ton Show</div>
+    <h1>ESPACE<br><span>PROFS</span></h1>
+    <span class="badge badge-red" style="margin-top:.6rem">Accès restreint</span>
+  </div>
+
+  <!-- Écran de connexion -->
+  <div class="card" id="lock-screen">
+    <div class="card-title">Connexion</div>
+
+    <input type="password" class="input-center" id="lpi" placeholder="Mot de passe"
+      style="width:100%;background:#141414;border:1px solid var(--border);border-radius:var(--r-sm);color:var(--white);font-size:.95rem;padding:.75rem;outline:none;margin-bottom:.6rem;">
+
+    <div class="lock-error" id="lpe"></div>
+
+    <label class="remember-row" for="lremember">
+      <input type="checkbox" id="lremember">
+      <div class="remember-box"></div>
+      <span class="remember-label">Se souvenir de moi</span>
+    </label>
+
+    <button class="btn-gold" onclick="chkLock()">Accéder</button>
+  </div>
+
+  <!-- Formulaire de publication (visible après auth) -->
+  <div class="card" id="form-card">
+    <div class="card-title">Publier un contenu</div>
+
+    <div class="field">
+      <label>Catégorie</label>
+      <select id="f-cat" onchange="updateSubcats()">
+        <option value="">-- Choisir --</option>
+        <option value="Theatre">🎭 Théâtre</option>
+        <option value="Chant">🎤 Chant</option>
+        <option value="Danse">💃 Danse</option>
+        <option value="Musique">🎸 Musique</option>
+        <option value="Singer Academy">⭐ Singer Academy</option>
+        <option value="Comedie Musicale">🎬 Comédie Musicale</option>
+        <option value="Singer Show">🌟 Singer Show</option>
+        <option value="Atelier">🎨 Atelier</option>
+      </select>
+    </div>
+
+    <div class="field" id="subcat-row" style="display:none">
+      <label>Section (optionnel)</label>
+      <select id="f-subcat">
+        <option value="">-- Aucune --</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Type de contenu</label>
+      <select id="f-type" onchange="updateType()">
+        <option value="pdf">Document PDF</option>
+        <option value="mp3">Audio / MP3</option>
+        <option value="video">Vidéo</option>
+        <option value="image">Image</option>
+        <option value="texte">Texte / Message</option>
+        <option value="doc">Autre lien</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Titre</label>
+      <input type="text" id="f-name" placeholder="Ex : Partition cours 3…">
+    </div>
+
+    <div class="field" id="url-row">
+      <label id="url-label">Lien (Google Drive, YouTube…)</label>
+      <input type="text" id="f-url" placeholder="https://…">
+    </div>
+
+    <div class="field" id="upload-row">
+      <label>Ou glisse ton fichier directement</label>
+      <div id="drop-zone" onclick="document.getElementById('f-file').click()">
+        <div id="drop-text">Glisse ton fichier ici ou clique pour choisir</div>
+        <div id="upload-progress" style="display:none">
+          <div class="upload-progress-bar">
+            <div class="upload-progress-fill" id="progress-bar"></div>
+          </div>
+          <div class="upload-progress-text" id="progress-text">Upload en cours…</div>
+        </div>
+      </div>
+      <input type="file" id="f-file" style="display:none"
+        accept=".pdf,.mp3,.mp4,.jpg,.jpeg,.png,.gif,.doc,.docx,.ppt,.pptx">
+    </div>
+
+    <hr class="divider">
+    <p style="font-size:.7rem;color:var(--muted);font-style:italic;margin-bottom:.8rem">
+      Optionnel — Note (ajoutera une 2e ligne)
+    </p>
+
+    <div class="field">
+      <textarea id="f-text" placeholder="Ex : Pensez à apporter vos partitions…"></textarea>
+    </div>
+
+    <div id="msg" class="msg"></div>
+    <button class="btn" id="btn-submit" onclick="doSubmit()">Publier</button>
+  </div>
+
+  <footer class="page-footer">
+    <a href="membres.html">Espace membres</a>
+  </footer>
+
+</div>
+
+<!-- Utilitaires partagés -->
+<script src="assets/js/fts-utils.js"></script>
+<script src="assets/js/fts-firebase.js"></script>
+
+<script>
+/* ── CONFIG LOCALE (spécifique à cette page) ──────────────────── */
+const PWD = "profs2026"; // TODO → remplacer par Firebase Auth
+
+const SUBCATS = {
+  Theatre:          ["7/9 ans","10/12 ans","13/15 ans","Impro","10/17 ans - Lundi","Adultes - Lundi","Adultes - Vendredi"],
+  Danse:            ["Les Baby Show","Show Danse Junior","Ados / Adultes"],
+  Musique:          ["Guitare","Basse","Batterie","Piano","Formation Musicale"],
+  "Singer Academy": ["Loisir","Spectacle"],
+  "Comedie Musicale": ["Kids","Enfants","Adultes"],
+};
+
+/* ── AUTH ─────────────────────────────────────────────────────── */
+(function() {
+  if (FTS.store.get('fts_profs_pwd') === PWD) {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('form-card').style.display = 'block';
+  }
+})();
+
+function chkLock() {
+  const val = document.getElementById('lpi').value;
+  if (val === PWD) {
+    if (document.getElementById('lremember').checked) {
+      FTS.store.set('fts_profs_pwd', PWD);
+    }
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('form-card').style.display = 'block';
+  } else {
+    document.getElementById('lpe').textContent = 'Mot de passe incorrect';
+    document.getElementById('lpi').value = '';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('lpi').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') chkLock();
+  });
+});
+
+/* ── FORMULAIRE ───────────────────────────────────────────────── */
+function updateSubcats() {
+  const cat = document.getElementById('f-cat').value;
+  const row = document.getElementById('subcat-row');
+  const sel = document.getElementById('f-subcat');
+  sel.innerHTML = '<option value="">-- Aucune --</option>';
+  if (SUBCATS[cat]) {
+    SUBCATS[cat].forEach(function(s) {
+      const o = document.createElement('option');
+      o.value = s; o.textContent = s;
+      sel.appendChild(o);
+    });
+    row.style.display = 'block';
+  } else {
+    row.style.display = 'none';
+  }
+}
+
+function updateType() {
+  const t = document.getElementById('f-type').value;
+  document.getElementById('url-row').style.display    = t === 'texte' ? 'none' : 'block';
+  document.getElementById('upload-row').style.display = t === 'texte' ? 'none' : 'block';
+  const labels = {
+    pdf: "Lien Google Drive (PDF)", mp3: "Lien audio",
+    video: "Lien YouTube ou Drive", image: "Lien image", doc: "Lien",
+  };
+  document.getElementById('url-label').textContent = labels[t] || 'Lien';
+}
+
+/* ── DRAG & DROP ──────────────────────────────────────────────── */
+const dropZone = document.getElementById('drop-zone');
+
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) uploadFile(file);
+});
+
+document.getElementById('f-file').addEventListener('change', function() {
+  if (this.files[0]) uploadFile(this.files[0]);
+});
+
+/* ── UPLOAD CLOUDINARY ─────────────────────────────────────────
+   Utilise FTS.uploadCloudinary() défini dans fts-utils.js
+   qui lit FTS.CLOUDINARY depuis fts-firebase.js
+   ──────────────────────────────────────────────────────────── */
+function uploadFile(file) {
+  if (file.size > 100 * 1024 * 1024) {
+    showMsg('Fichier trop volumineux (max 100 Mo)', 'error');
+    return;
+  }
+
+  document.getElementById('upload-progress').style.display = 'block';
+  document.getElementById('drop-text').style.display = 'none';
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('progress-bar').style.background = 'var(--red)';
+  document.getElementById('progress-text').textContent = 'Upload en cours…';
+
+  FTS.uploadCloudinary(file, pct => {
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-text').textContent = 'Upload ' + pct + '%…';
+  })
+  .then(url => {
+    document.getElementById('f-url').value = url;
+    document.getElementById('progress-text').textContent = '✓ ' + file.name + ' uploadé !';
+    document.getElementById('progress-bar').style.width = '100%';
+    document.getElementById('progress-bar').style.background = '#22c55e';
+
+    // Détecter le type automatiquement
+    const ext = file.name.split('.').pop().toLowerCase();
+    const typeMap = { pdf:'pdf', mp3:'mp3', mp4:'video', jpg:'image', jpeg:'image', png:'image', gif:'image' };
+    if (typeMap[ext]) document.getElementById('f-type').value = typeMap[ext];
+  })
+  .catch(() => {
+    document.getElementById('progress-text').textContent = 'Erreur lors de l\'upload';
+    document.getElementById('drop-text').style.display = 'block';
+    document.getElementById('upload-progress').style.display = 'none';
+  });
+}
+
+/* ── PUBLICATION ──────────────────────────────────────────────── */
+function envoyer(cat, subcat, name, url, type, cb) {
+  // Utilise FTS.SCRIPT.publication défini dans fts-firebase.js
+  const scriptUrl = (window.FTS && FTS.SCRIPT)
+    ? FTS.SCRIPT.publication
+    : "https://script.google.com/macros/s/AKfycby0VF50V2UGWLZ-65GeeeHlibSrZhqqcx1IHQ8-bkrGmsxCBO3hkYZrMiCnE1GqTgEBNg/exec";
+
+  const u = scriptUrl
+    + '?cat='    + encodeURIComponent(cat)
+    + '&subcat=' + encodeURIComponent(subcat)
+    + '&name='   + encodeURIComponent(name)
+    + '&url='    + encodeURIComponent(url)
+    + '&type='   + encodeURIComponent(type);
+
+  fetch(u).then(cb).catch(cb);
+}
+
+function doSubmit() {
+  const cat    = document.getElementById('f-cat').value;
+  const subcat = document.getElementById('f-subcat').value;
+  const type   = document.getElementById('f-type').value;
+  const name   = document.getElementById('f-name').value.trim();
+  const url    = document.getElementById('f-url').value.trim();
+  const text   = document.getElementById('f-text').value.trim();
+
+  if (!cat)                       { showMsg('Choisis une catégorie.',              'error'); return; }
+  if (!name)                      { showMsg('Entre un titre.',                     'error'); return; }
+  if (type !== 'texte' && !url)   { showMsg('Entre le lien ou glisse un fichier.', 'error'); return; }
+  if (type === 'texte' && !text)  { showMsg('Entre le texte.',                    'error'); return; }
+
+  document.getElementById('btn-submit').disabled = true;
+  document.getElementById('btn-submit').textContent = 'Publication…';
+  clearMsg();
+
+  const mainUrl = type === 'texte' ? text : url;
+
+  if (text && type !== 'texte') {
+    // Double publication : note + contenu principal
+    envoyer(cat, subcat, name + ' - Note', text, 'texte', function() {
+      envoyer(cat, subcat, name, mainUrl, type, function() { done(2); });
+    });
+  } else {
+    envoyer(cat, subcat, name, mainUrl, type, function() { done(1); });
+  }
+}
+
+function done(n) {
+  document.getElementById('btn-submit').disabled = false;
+  document.getElementById('btn-submit').textContent = 'Publier';
+  showMsg(n > 1 ? n + ' éléments publiés !' : 'Publié avec succès !', 'success');
+
+  // Reset du formulaire
+  ['f-name', 'f-url', 'f-text'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('drop-text').style.display = 'block';
+  document.getElementById('upload-progress').style.display = 'none';
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('progress-bar').style.background = 'var(--red)';
+}
+
+function showMsg(msg, type) {
+  const el = document.getElementById('msg');
+  el.className = 'msg ' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+  if (type === 'success') setTimeout(() => el.style.display = 'none', 4000);
+}
+
+function clearMsg() {
+  document.getElementById('msg').style.display = 'none';
+}
+</script>
+</body>
+</html>

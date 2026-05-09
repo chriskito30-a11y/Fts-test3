@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fais Ton Show — Rejoins-nous</title>
+<meta name="description" content="Fais Ton Show — École des arts de la scène. Théâtre, danse, musique, chant, comédie musicale.">
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+
+<!-- Design system partagé -->
+<link rel="stylesheet" href="assets/css/fts.css">
+
+<!-- Styles spécifiques à cette page -->
+<style>
+/* Layout centré vertical (spécifique à l'accueil) */
+html, body { height: 100%; }
+
+.wrapper {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+
+/* Header d'accueil */
+.site-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  animation: fadeUp .6s ease both;
+}
+
+.site-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3rem, 10vw, 5.5rem);
+  letter-spacing: .04em;
+  color: var(--white);
+  line-height: .95;
+}
+
+.site-title span { color: var(--red); }
+
+.site-slogan {
+  font-size: .85rem;
+  color: var(--muted);
+  margin-top: .7rem;
+}
+
+.header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  margin-top: 1rem;
+  font-size: .75rem;
+  padding: .4rem .9rem;
+  border-radius: 2px;
+  text-decoration: none;
+  transition: all .2s;
+}
+
+.header-link-gold {
+  color: var(--gold);
+  border: 1px solid rgba(201,168,76,.3);
+}
+
+.header-link-gold:hover { background: rgba(201,168,76,.08); }
+
+.header-link-muted {
+  color: var(--muted);
+  border: 1px solid rgba(255,255,255,.1);
+}
+
+.header-link-muted:hover { background: rgba(255,255,255,.04); color: var(--white); }
+
+/* Carte questionnaire */
+.questionnaire-card {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(8px);
+  padding: 2rem;
+  animation: fadeUp .6s .1s ease both;
+}
+
+/* Étapes */
+.step-label {
+  font-size: .6rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+.step-question {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  letter-spacing: .03em;
+  margin-bottom: .4rem;
+  line-height: 1.1;
+}
+
+.step-desc {
+  font-size: .8rem;
+  color: var(--muted);
+  margin-bottom: 1.4rem;
+}
+
+/* Options de sélection */
+.options { display: flex; flex-direction: column; gap: .6rem; }
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+  padding: .9rem 1rem;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: all .18s;
+  user-select: none;
+}
+
+.option:hover    { background: rgba(212,32,26,.07); border-color: rgba(212,32,26,.3); }
+.option.selected { background: rgba(212,32,26,.1);  border-color: var(--red); }
+
+.opt-icon  { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
+.opt-title { font-size: .88rem; font-weight: 500; }
+.opt-desc  { font-size: .72rem; color: var(--muted); margin-top: .15rem; }
+
+/* Boutons d'action */
+.step-actions {
+  display: flex;
+  gap: .7rem;
+  margin-top: 1.4rem;
+}
+
+.btn-step-back {
+  padding: .65rem 1rem;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: .78rem;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: var(--font-body);
+}
+
+.btn-step-back:hover { border-color: rgba(255,255,255,.3); color: var(--white); }
+
+.btn-step-next {
+  flex: 1;
+  padding: .65rem 1.2rem;
+  background: var(--red);
+  border: none;
+  border-radius: var(--r-sm);
+  color: var(--white);
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+  font-family: var(--font-body);
+}
+
+.btn-step-next:disabled { background: rgba(212,32,26,.3); cursor: not-allowed; }
+.btn-step-next:not(:disabled):hover { background: var(--red-dark); }
+
+/* Destination finale */
+.destination { text-align: center; animation: fadeUp .4s ease both; }
+
+.dest-badge {
+  display: inline-block;
+  background: rgba(201,168,76,.1);
+  border: 1px solid rgba(201,168,76,.3);
+  color: var(--gold);
+  font-size: .65rem;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  padding: .3rem .8rem;
+  border-radius: 2px;
+  margin-bottom: 1.2rem;
+}
+
+.dest-icon   { font-size: 3rem; margin-bottom: .8rem; }
+
+.dest-title  {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  letter-spacing: .03em;
+  margin-bottom: .5rem;
+}
+
+.dest-desc {
+  font-size: .82rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 1.2rem;
+}
+
+.dest-details { display: flex; flex-direction: column; gap: .35rem; margin-bottom: 1.5rem; }
+
+.dest-detail {
+  display: flex;
+  justify-content: space-between;
+  font-size: .75rem;
+  padding: .4rem .7rem;
+  background: rgba(255,255,255,.03);
+  border-radius: var(--r-sm);
+}
+
+.dest-detail-key { color: var(--muted); }
+.dest-detail-val { color: var(--white); font-weight: 500; }
+
+.btn-helloasso {
+  display: block;
+  padding: .9rem 1.5rem;
+  background: var(--red);
+  color: var(--white);
+  text-decoration: none;
+  border-radius: var(--r-sm);
+  font-size: .85rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-align: center;
+  transition: background .2s;
+  margin-bottom: .8rem;
+}
+
+.btn-helloasso:hover { background: var(--red-dark); }
+
+/* Erreur */
+.error-wrap { text-align: center; padding: 1.5rem 0; }
+.error-icon { font-size: 2rem; margin-bottom: .6rem; }
+.error-msg  { font-size: .8rem; color: #aa5a5a; line-height: 1.5; }
+</style>
+</head>
+
+<body class="has-noise has-glow">
+<div class="wrapper">
+
+  <header class="site-header">
+    <div class="eyebrow" id="h-eyebrow"></div>
+    <div class="site-title" id="h-title"></div>
+    <div class="site-slogan" id="h-slogan"></div>
+    <a id="h-membres" class="header-link header-link-gold" href="/membres.html">
+      🎭 Déjà adhérent·e ? → Accéder à mon espace
+    </a>
+    <br>
+    <a class="header-link header-link-muted" href="saison.html">
+      📅 Découvrir la saison 2026/2027 →
+    </a>
+  </header>
+
+  <div class="questionnaire-card" id="card">
+    <div class="loading-wrap" id="loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Chargement en cours…</div>
+    </div>
+  </div>
+
+  <footer class="page-footer" id="footer"></footer>
+
+</div>
+
+<!-- Utilitaires partagés -->
+<script src="assets/js/fts-utils.js"></script>
+
+<script>
+/* ── CONFIG ─────────────────────────────────────────────────────
+   Seules les données spécifiques à cette page restent ici.
+   Les URLs Google Sheets sont dans fts-firebase.js (FTS.SHEETS).
+   ──────────────────────────────────────────────────────────── */
+const CFG = {
+  name:    "Fais Ton Show",
+  eyebrow: "École des arts de la scène",
+  slogan:  "On est pas là pour faire semblant, on est là pour faire le Show !",
+  footer:  "Fais Ton Show · contact@faistonshow.fr",
+
+  step1: {
+    question: "C'est ta première fois avec nous ?",
+    desc:     "Pour te guider vers les bonnes options.",
+  },
+
+  step2: {
+    question:   "Que souhaites-tu faire ?",
+    desc:       "Dis-nous si tu fais déjà partie de l'aventure.",
+    categories: [
+      { id: "adhesion", icon: "🎫", title: "Prendre mon adhésion",       desc: "Rejoindre l'association pour la saison",    profiles: ["new"] },
+      { id: "event",    icon: "🎪", title: "Acheter une place",           desc: "Spectacles, soirées, showcases…",          profiles: ["member", "new"] },
+      { id: "goodie",   icon: "🛍️", title: "Commander des goodies",       desc: "T-shirts, accessoires, merch…",           profiles: ["member", "new"] },
+      { id: "renew",    icon: "🔄", title: "Renouveler mon adhésion",     desc: "Rempiler pour une nouvelle saison",        profiles: ["member"] },
+    ],
+  },
+
+  step3Questions: {
+    adhesion: { q: "Quel type d'adhésion ?",    d: "Choisis la formule adaptée à ta situation." },
+    event:    { q: "Quel événement t'intéresse ?", d: "Sélectionne le prochain show qui t'attire." },
+    goodie:   { q: "Que cherches-tu ?",          d: "Notre boutique officielle sur HelloAsso." },
+    renew:    { q: "Ton type d'adhésion ?",       d: "Même formule ou changement de catégorie ?" },
+  },
+};
+
+/* ── ÉTAT ────────────────────────────────────────────────────── */
+const state = { step1: null, step2: null, step3: null };
+let step3Options = {};
+
+/* ── CHARGEMENT SHEET ────────────────────────────────────────── */
+async function loadSheet() {
+  try {
+    // URL définie dans fts-firebase.js → FTS.SHEETS.inscriptions
+    // Fallback inline si le fichier n'est pas chargé
+    const url = (window.FTS && FTS.SHEETS)
+      ? FTS.SHEETS.inscriptions
+      : "https://docs.google.com/spreadsheets/d/e/2PACX-1vS27ZR5nQD9snZ3mNaeIxOjxyHlpWEnhKl7APAY4OZsSOiIxqyrNQ6ENLWl_A-evRtoqVxy62QUm1in/pub?gid=627892990&single=true&output=csv";
+
+    const res  = await FTS.fetch(url, 8000);
+    const text = await res.text();
+    const rows = FTS.parseCSV(text);
+    step3Options = buildStep3Options(rows);
+  } catch (e) {
+    console.warn('[FTS] Impossible de charger le sheet :', e);
+  }
+  initPage();
+}
+
+function buildStep3Options(rows) {
+  const result = {};
+  rows.forEach(row => {
+    const type = row['type'] ? row['type'].toLowerCase() : '';
+    if (!type || !row['titre']) return;
+
+    if (!result[type]) {
+      const q3 = CFG.step3Questions[type] || { q: 'Choisis une option', d: '' };
+      result[type] = { question: q3.q, desc: q3.d, options: [] };
+    }
+
+    const detail = [];
+    if (row['detail1_cle'] && row['detail1_valeur']) detail.push([row['detail1_cle'], row['detail1_valeur']]);
+    if (row['detail2_cle'] && row['detail2_valeur']) detail.push([row['detail2_cle'], row['detail2_valeur']]);
+
+    result[type].options.push({
+      id:        type + '_' + result[type].options.length,
+      icon:      row['icon']        || '🎭',
+      title:     row['titre']       || '',
+      desc:      row['description'] || '',
+      detail,
+      link:      row['lien']        || '#',
+      destTitle: row['dest_titre']  || row['titre'] || '',
+      destDesc:  row['dest_desc']   || row['description'] || '',
+    });
+  });
+  return result;
+}
+
+function initPage() {
+  // Titre
+  const parts = CFG.name.split(' ');
+  const last  = parts.pop();
+  document.getElementById('h-eyebrow').textContent = CFG.eyebrow;
+  document.getElementById('h-title').innerHTML =
+    (parts.length ? parts.join(' ') + '<br>' : '') + '<span>' + last + '</span>';
+  document.getElementById('h-slogan').textContent = CFG.slogan;
+  document.getElementById('footer').textContent   = CFG.footer;
+  renderStep1();
+}
+
+/* ── ÉTAPE 1 ─────────────────────────────────────────────────── */
+function renderStep1() {
+  document.getElementById('card').innerHTML = `
+    <div class="step-label">Étape 1 / 3</div>
+    <div class="step-question">${CFG.step1.question}</div>
+    <div class="step-desc">${CFG.step1.desc}</div>
+    <div class="options" id="s1-opts">
+      <div class="option" data-id="new" onclick="selectStep1(this)">
+        <div class="opt-icon">✨</div>
+        <div class="opt-text">
+          <div class="opt-title">Je découvre l'association</div>
+          <div class="opt-desc">Première fois que j'entends parler de vous</div>
+        </div>
+      </div>
+      <div class="option" data-id="member" onclick="selectStep1(this)">
+        <div class="opt-icon">🎭</div>
+        <div class="opt-text">
+          <div class="opt-title">Je suis déjà adhérent·e</div>
+          <div class="opt-desc">J'ai déjà ma carte membre cette saison</div>
+        </div>
+      </div>
+    </div>
+    <div class="step-actions">
+      <button class="btn-step-next" id="btn1" disabled onclick="goStep2()">Continuer →</button>
+    </div>`;
+}
+
+function selectStep1(el) {
+  document.querySelectorAll('#s1-opts .option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  state.step1 = el.dataset.id;
+  document.getElementById('btn1').disabled = false;
+}
+
+/* ── ÉTAPE 2 ─────────────────────────────────────────────────── */
+function goStep2() {
+  const cats = CFG.step2.categories.filter(c => c.profiles.includes(state.step1));
+  document.getElementById('card').innerHTML = `
+    <div class="step-label">Étape 2 / 3</div>
+    <div class="step-question">${CFG.step2.question}</div>
+    <div class="step-desc">${CFG.step2.desc}</div>
+    <div class="options" id="s2-opts">
+      ${cats.map(c => `
+        <div class="option" data-id="${c.id}" onclick="selectStep2(this)">
+          <div class="opt-icon">${c.icon}</div>
+          <div class="opt-text">
+            <div class="opt-title">${c.title}</div>
+            <div class="opt-desc">${c.desc}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="step-actions">
+      <button class="btn-step-back" onclick="renderStep1()">← Retour</button>
+      <button class="btn-step-next" id="btn2" disabled onclick="goStep3()">Continuer →</button>
+    </div>`;
+}
+
+function selectStep2(el) {
+  document.querySelectorAll('#s2-opts .option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  state.step2 = el.dataset.id;
+  document.getElementById('btn2').disabled = false;
+}
+
+/* ── ÉTAPE 3 ─────────────────────────────────────────────────── */
+function goStep3() {
+  const q3 = step3Options[state.step2];
+  if (!q3 || !q3.options.length) {
+    document.getElementById('card').innerHTML = `
+      <div class="error-wrap">
+        <div class="error-icon">🔍</div>
+        <div class="error-msg">Aucune option disponible pour le moment.<br>Contactez l'association.</div>
+      </div>`;
+    return;
+  }
+  document.getElementById('card').innerHTML = `
+    <div class="step-label">Étape 3 / 3</div>
+    <div class="step-question">${q3.question}</div>
+    <div class="step-desc">${q3.desc}</div>
+    <div class="options" id="s3-opts">
+      ${q3.options.map(o => `
+        <div class="option" data-id="${o.id}" onclick="selectStep3(this)">
+          <div class="opt-icon">${o.icon}</div>
+          <div class="opt-text">
+            <div class="opt-title">${o.title}</div>
+            <div class="opt-desc">${o.desc}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="step-actions">
+      <button class="btn-step-back" onclick="goStep2()">← Retour</button>
+      <button class="btn-step-next" id="btn3" disabled onclick="showDest()">Voir où s'inscrire →</button>
+    </div>`;
+}
+
+function selectStep3(el) {
+  document.querySelectorAll('#s3-opts .option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  state.step3 = el.dataset.id;
+  document.getElementById('btn3').disabled = false;
+}
+
+/* ── DESTINATION ─────────────────────────────────────────────── */
+function showDest() {
+  const q3  = step3Options[state.step2];
+  const opt = q3.options.find(o => o.id === state.step3);
+  if (!opt) return;
+
+  const details = opt.detail.map(d =>
+    `<div class="dest-detail">
+      <span class="dest-detail-key">${d[0]}</span>
+      <span class="dest-detail-val">${d[1]}</span>
+    </div>`
+  ).join('');
+
+  document.getElementById('card').innerHTML = `
+    <div class="destination">
+      <div class="dest-badge">Prêt à rejoindre le show</div>
+      <div class="dest-icon">${opt.icon}</div>
+      <div class="dest-title">${FTS.esc(opt.destTitle || opt.title)}</div>
+      <div class="dest-desc">${FTS.esc(opt.destDesc  || opt.desc)}</div>
+      ${details ? '<div class="dest-details">' + details + '</div>' : ''}
+      <a href="${opt.link}" class="btn-helloasso" target="_blank" rel="noopener">
+        S'inscrire sur HelloAsso →
+      </a>
+      <button class="btn-ghost" onclick="restart()">Recommencer depuis le début</button>
+    </div>`;
+}
+
+function restart() {
+  state.step1 = state.step2 = state.step3 = null;
+  renderStep1();
+}
+
+/* ── START ───────────────────────────────────────────────────── */
+loadSheet();
+</script>
+
+<!-- PWA partagé -->
+<script src="assets/js/fts-pwa.js"></script>
+
+<!-- Install bar (HTML minimal requis par fts-pwa.js) -->
+<div class="install-bar" id="install-bar">
+  <p id="install-msg"></p>
+  <button class="btn-install" id="btn-install">Installer</button>
+  <button class="btn-close-bar" id="btn-close-bar">✕</button>
+</div>
+
+</body>
+</html>

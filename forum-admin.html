@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forum Admin — Fais Ton Show</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- ✅ Design system partagé -->
+<link rel="stylesheet" href="assets/css/fts.css">
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<!--
+  CSS SUPPRIMÉ car déjà dans fts.css :
+    reset, :root variables, html/body base,
+    .modal-overlay + .modal-overlay.hidden,
+    .pill-container,
+    .pill / .pill:hover / .pill.active
+      → forum-admin utilise border-radius:20px = valeur par défaut de fts.css,
+        aucun override nécessaire (contrairement à forum.html qui utilise 3px),
+    .status-badge / .status-pending / .status-active / .status-refused
+
+  CSS CONSERVÉ ici : tout ce qui est spécifique au dashboard admin.
+-->
+<style>
+
+/* ── ÉCRAN DE CONNEXION ──────────────────────────────────────── */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-box {
+  background: var(--grey);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 2.5rem;
+  width: 90%;
+  max-width: 360px;
+  text-align: center;
+}
+
+.login-logo {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--red);
+  margin-bottom: .2rem;
+}
+
+.login-sub {
+  font-size: .65rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 2rem;
+}
+
+.login-input {
+  width: 100%;
+  background: #0e0e0e;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: .9rem;
+  padding: .75rem;
+  outline: none;
+  text-align: center;
+  letter-spacing: .15em;
+  margin-bottom: .6rem;
+  transition: border-color .2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.login-input:focus { border-color: var(--red); }
+
+.login-err {
+  font-size: .72rem;
+  color: var(--red);
+  min-height: 1rem;
+  margin-bottom: .5rem;
+}
+
+.login-btn {
+  width: 100%;
+  background: var(--red);
+  border: none;
+  color: var(--white);
+  padding: .85rem;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: .1em;
+  transition: background .2s;
+}
+
+.login-btn:hover { background: #b71815; }
+
+/* ── DASHBOARD ───────────────────────────────────────────────── */
+.dashboard { display: none; min-height: 100vh; }
+
+.dash-hdr {
+  background: var(--grey2);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dash-logo {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--red);
+}
+
+.dash-sub { font-size: .65rem; color: var(--muted); margin-top: .1rem; }
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid #333;
+  color: var(--muted);
+  padding: .4rem .9rem;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-size: .72rem;
+  font-family: var(--font-body);
+  transition: all .2s;
+}
+
+.btn-logout:hover { border-color: var(--red); color: var(--white); }
+
+/* ── ONGLETS ─────────────────────────────────────────────────── */
+.tabs-bar {
+  background: var(--grey2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex;
+  gap: 0;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  padding: .8rem 1.2rem;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: .82rem;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.tab-btn:hover     { color: var(--white); }
+.tab-btn.active    { border-bottom-color: var(--red); color: var(--white); }
+
+/*
+  .badge ici = compteur numérique sur les onglets (pastille rouge/verte).
+  DIFFÉRENT de .badge dans fts.css (label textuel).
+  Override nécessaire pour ce cas d'usage spécifique.
+*/
+.badge {
+  background: var(--red);
+  color: var(--white);
+  font-size: .55rem;
+  padding: .1rem .35rem;
+  border-radius: 8px;
+  min-width: 16px;
+  text-align: center;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ── CONTENU DU DASHBOARD ────────────────────────────────────── */
+.dash-body { padding: 2rem; max-width: 900px; margin: 0 auto; }
+
+.tab-content        { display: none; }
+.tab-content.active { display: block; }
+
+.sec-title {
+  font-size: .6rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── CARTES UTILISATEURS ─────────────────────────────────────── */
+.user-card {
+  background: var(--grey);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 1.2rem;
+  margin-bottom: .8rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--white);
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.user-avatar.pending { background: var(--gold); }
+.user-avatar.refused { background: #444; }
+
+.user-info     { flex: 1; min-width: 150px; }
+.user-name     { font-size: .95rem; font-weight: 500; margin-bottom: .2rem; }
+.user-meta     { font-size: .72rem; color: var(--muted); }
+
+.user-group {
+  display: inline-block;
+  font-size: .65rem;
+  background: rgba(201,168,76,.1);
+  border: 1px solid rgba(201,168,76,.2);
+  color: var(--gold);
+  padding: .15rem .5rem;
+  border-radius: 2px;
+  margin-top: .2rem;
+}
+
+.user-actions { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+
+.btn-action {
+  padding: .4rem .8rem;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: .72rem;
+  border: 1px solid;
+  transition: all .2s;
+}
+
+.btn-approve { background: rgba(50,120,50,.15);   border-color: #2a5a2a; color: #6aba6a; }
+.btn-refuse  { background: rgba(120,30,30,.15);   border-color: #5a2020; color: #aa6060; }
+.btn-modify  { background: transparent;           border-color: #333;    color: var(--muted); }
+.btn-revoke  { background: transparent;           border-color: #5a2020; color: #aa5050; }
+
+/* ── MODALE MODIFICATION ─────────────────────────────────────────
+   .modal-overlay + .modal-overlay.hidden → fts.css ✅
+   .pill-container, .pill → fts.css ✅ (20px radius = valeur par défaut)
+──────────────────────────────────────────────────────────────── */
+.modal {
+  background: var(--grey);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 2rem;
+  width: 95%;
+  max-width: 450px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal h3 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.modal-label {
+  font-size: .65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  display: block;
+  margin-bottom: .5rem;
+  margin-top: 1rem;
+}
+
+/* Sous-groupes dans la modale (disciplines → créneaux) */
+.sub-group     { margin-bottom: .8rem; }
+
+.sub-group-lbl {
+  font-size: .6rem;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: .4rem;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.sub-group-lbl::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.no-sub-note {
+  font-size: .7rem;
+  color: #555;
+  font-style: italic;
+  padding: .2rem 0;
+}
+
+/* Boutons de la modale */
+.modal-row { display: flex; gap: .6rem; margin-top: 1.5rem; }
+
+.modal-row button {
+  flex: 1;
+  padding: .75rem;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: .8rem;
+  border: none;
+  transition: background .2s;
+}
+
+.btn-confirm       { background: var(--red);  color: var(--white); }
+.btn-confirm:hover { background: #b71815; }
+.btn-cancel        { background: #2a2a2a; color: var(--muted); }
+.btn-cancel:hover  { background: #333; color: var(--white); }
+
+/* ── ONGLET MESSAGES ─────────────────────────────────────────── */
+.ch-selector { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.2rem; }
+
+.ch-tag {
+  background: #141414;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: .35rem .8rem;
+  cursor: pointer;
+  font-size: .78rem;
+  color: var(--muted);
+  transition: all .2s;
+  font-family: var(--font-body);
+}
+
+.ch-tag.active { border-color: var(--red); color: var(--white); background: rgba(212,32,26,.08); }
+
+.msg-item {
+  background: var(--grey);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: .8rem 1rem;
+  margin-bottom: .5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: .8rem;
+}
+
+.msg-body        { flex: 1; }
+.msg-author-name { font-size: .78rem; color: var(--gold); font-weight: 500; margin-bottom: .2rem; }
+.msg-text        { font-size: .82rem; color: var(--white); line-height: 1.5; }
+.msg-time        { font-size: .65rem; color: #555; margin-top: .2rem; }
+
+.btn-del {
+  background: transparent;
+  border: 1px solid #3a1a1a;
+  color: #aa5a5a;
+  padding: .3rem .6rem;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: .7rem;
+  flex-shrink: 0;
+  transition: all .2s;
+  font-family: var(--font-body);
+}
+
+.btn-del:hover { background: rgba(212,32,26,.15); border-color: var(--red); }
+
+/* ── ÉTAT VIDE (message "aucun élément") ─────────────────────── */
+.empty-msg {
+  color: var(--muted);
+  font-size: .82rem;
+  padding: 1rem 0;
+  font-style: italic;
+}
+
+/* ── RESPONSIVE ──────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .tabs-bar  { padding: 0 1rem; }
+  .dash-body { padding: 1rem; }
+  .user-card { gap: .6rem; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ── ÉCRAN DE CONNEXION ─────────────────────────────────────── -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">FAIS TON SHOW</div>
+    <div class="login-sub">Admin Forum</div>
+    <input class="login-input" id="login-input" type="password" placeholder="Mot de passe…">
+    <div class="login-err" id="login-err"></div>
+    <button class="login-btn" onclick="doLogin()">Accéder</button>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ─────────────────────────────────────────────── -->
+<div class="dashboard" id="dashboard">
+
+  <div class="dash-hdr">
+    <div>
+      <div class="dash-logo">FAIS TON SHOW</div>
+      <div class="dash-sub">Admin Forum</div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+  </div>
+
+  <div class="tabs-bar">
+    <button class="tab-btn active" onclick="showTab('pending', this)">
+      ⏳ En attente <span class="badge" id="badge-pending">0</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('members', this)">
+      👥 Membres actifs <span class="badge" id="badge-members" style="background:#2a5a2a">0</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('messages', this)">
+      💬 Messages
+    </button>
+  </div>
+
+  <div class="dash-body">
+    <div class="tab-content active" id="tab-pending">
+      <div class="sec-title">Inscriptions en attente</div>
+      <div id="pending-list"></div>
+    </div>
+    <div class="tab-content" id="tab-members">
+      <div class="sec-title">Membres actifs</div>
+      <div id="members-list"></div>
+    </div>
+    <div class="tab-content" id="tab-messages">
+      <div class="sec-title">Modération messages</div>
+      <div class="ch-selector" id="ch-selector"></div>
+      <div id="msg-list"></div>
+    </div>
+  </div>
+
+</div><!-- /dashboard -->
+
+<!-- ── MODALE MODIFICATION ────────────────────────────────────────
+     .modal-overlay + .hidden → fts.css ✅
+     .pill-container → fts.css ✅
+     .pill (border-radius:20px) → fts.css ✅ (pas d'override ici,
+       contrairement à forum.html qui utilise 3px)
+──────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="mod-modal">
+  <div class="modal">
+    <h3>Modifier l'accès</h3>
+    <input type="hidden" id="mod-uid">
+    <label class="modal-label">Discipline(s) — clique pour sélectionner</label>
+    <!-- ✅ .pill-container → fts.css -->
+    <div class="pill-container" id="mod-cat-pills"></div>
+    <div id="mod-sub-groups"></div>
+    <div class="modal-row">
+      <button class="btn-cancel"  onclick="closeModModal()">Annuler</button>
+      <button class="btn-confirm" onclick="saveModification()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ SCRIPTS ═══════════════════════════════════════════════════
+
+  Ordre de chargement :
+  1. Firebase SDK (chargé en <head>)
+  2. fts-utils.js  → FTS.esc, FTS.fetch, FTS.parseCSVRaw, FTS.store
+  3. fts-firebase.js → FTS.FIREBASE, FTS.SHEETS, FTS.initFirebase()
+  4. Script page    → logique admin (utilise FTS.* + firebase global)
+  5. fts-pwa.js     → SW registration
+
+═════════════════════════════════════════════════════════════════ -->
+<script src="assets/js/fts-utils.js"></script>
+<script src="assets/js/fts-firebase.js"></script>
+
+<script>
+/* ================================================================
+   FORUM-ADMIN.JS — Logique spécifique à l'interface admin
+
+   Remplacements opérés (fonctionnalités identiques) :
+
+   SUPPRIMÉ              → REMPLACÉ PAR
+   ─────────────────────────────────────────────────────────────
+   FIREBASE_CONFIG       → FTS.FIREBASE          (fts-firebase.js)
+   SHEET_URL             → FTS.SHEETS.ressources  (fts-firebase.js)
+   function esc()        → FTS.esc()              (fts-utils.js)
+   function initFirebase → renommée initDashboard()
+                           (conflit de nom avec FTS.initFirebase)
+                           + firebase.initializeApp → FTS.initFirebase()
+   fetch(SHEET_URL)      → FTS.fetch(FTS.SHEETS.ressources)
+   CSV parsing manuel    → FTS.parseCSVRaw()
+
+   Conservé (format différent de FTS.formatDateTime) :
+   function fmtDate()    → conservée locale (format court sans année)
+   ================================================================ */
+
+/* ── MOT DE PASSE ADMIN ──────────────────────────────────────── */
+const ADMIN_PWD = "admin2026";   // ⚠️ TODO → Firebase Auth
+
+/* ── ÉTAT ────────────────────────────────────────────────────── */
+let db, firebaseOk = false;
+let allUsers          = {};
+let allGroups         = [];
+let currentMsgChannel = "general";
+
+/* ── UTILITAIRE DATE LOCAL ────────────────────────────────────────
+   Format court "jj/mm hh:mm" spécifique à cette page.
+   Différent de FTS.formatDateTime → conservé ici.
+──────────────────────────────────────────────────────────────── */
+function fmtDate(ts) {
+  return new Date(ts).toLocaleString("fr-FR", {
+    day:    "2-digit",
+    month:  "2-digit",
+    hour:   "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/* ── INITIALISATION ──────────────────────────────────────────── */
+document.addEventListener("DOMContentLoaded", function() {
+  document.getElementById("login-input").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") doLogin();
+  });
+});
+
+/* ── CONNEXION ───────────────────────────────────────────────── */
+function doLogin() {
+  if (document.getElementById("login-input").value === ADMIN_PWD) {
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("dashboard").style.display   = "block";
+    initDashboard();
+  } else {
+    document.getElementById("login-err").textContent = "Mot de passe incorrect";
+  }
+}
+
+function doLogout() { window.location.reload(); }
+
+/* ── INIT FIREBASE + DASHBOARD ────────────────────────────────────
+   Renommée initDashboard() pour éviter le conflit de nom avec
+   FTS.initFirebase() défini dans fts-firebase.js.
+   Comportement identique à l'original.
+──────────────────────────────────────────────────────────────── */
+async function initDashboard() {
+  // ✅ FTS.initFirebase() remplace firebase.initializeApp(FIREBASE_CONFIG) + firebase.database()
+  db = FTS.initFirebase();
+  if (db) firebaseOk = true;
+  await loadGroups();
+  listenUsers();
+  buildChannelSelector();
+}
+
+/* ── CHARGEMENT DES GROUPES ──────────────────────────────────── */
+async function loadGroups() {
+  try {
+    // ✅ FTS.fetch() + FTS.SHEETS.ressources remplacent fetch(SHEET_URL)
+    const r    = await FTS.fetch(FTS.SHEETS.ressources);
+    const text = await r.text();
+    // ✅ FTS.parseCSVRaw() remplace le parsing manuel plus fragile
+    const rows = FTS.parseCSVRaw(text);
+    allGroups  = rows.map(row => ({
+      cat: (row[0] || "").trim(),
+      sub: (row[1] || "").trim(),
+    }));
+  } catch(e) {}
+}
+
+/* ── ÉCOUTE TEMPS RÉEL DES UTILISATEURS ─────────────────────── */
+function listenUsers() {
+  db.ref("fts_forum/users").on("value", function(snap) {
+    allUsers = snap.val() || {};
+    renderPending();
+    renderMembers();
+  });
+}
+
+/* ── RENDU : INSCRIPTIONS EN ATTENTE ─────────────────────────── */
+function renderPending() {
+  const pending = Object.entries(allUsers).filter(([id, u]) => u.status === "pending");
+  document.getElementById("badge-pending").textContent = pending.length;
+  const list = document.getElementById("pending-list");
+
+  if (pending.length === 0) {
+    list.innerHTML = '<div class="empty-msg">Aucune demande en attente.</div>';
+    return;
+  }
+
+  list.innerHTML = pending.map(([id, u]) => `
+    <div class="user-card">
+      <div class="user-avatar pending">${FTS.esc(u.name.charAt(0))}</div>
+      <div class="user-info">
+        <div class="user-name">${FTS.esc(u.name)}</div>
+        <div class="user-meta">${fmtDate(u.ts)}</div>
+        <div class="user-group">
+          ${FTS.esc(u.group)}${u.subgroup ? " — " + FTS.esc(u.subgroup) : ""}
+        </div>
+      </div>
+      <div class="user-actions">
+        <button class="btn-action btn-approve" onclick="approveUser('${id}')">✓ Valider</button>
+        <button class="btn-action btn-modify"  onclick="openModModal('${id}')">✎ Modifier</button>
+        <button class="btn-action btn-refuse"  onclick="refuseUser('${id}')">✕ Refuser</button>
+      </div>
+    </div>`).join("");
+}
+
+/* ── RENDU : MEMBRES ACTIFS ──────────────────────────────────── */
+function renderMembers() {
+  const members = Object.entries(allUsers).filter(([id, u]) =>
+    u.status === "active" || u.status === "refused"
+  );
+  document.getElementById("badge-members").textContent =
+    members.filter(([id, u]) => u.status === "active").length;
+
+  const list = document.getElementById("members-list");
+  list.innerHTML = members.map(([id, u]) => `
+    <div class="user-card">
+      <div class="user-avatar ${u.status === 'refused' ? 'refused' : ''}">${FTS.esc(u.name.charAt(0))}</div>
+      <div class="user-info">
+        <div class="user-name">
+          ${FTS.esc(u.name)}
+          <!-- ✅ .status-badge + .status-* → fts.css -->
+          <span class="status-badge status-${u.status}">${u.status}</span>
+        </div>
+        <div class="user-group">
+          ${FTS.esc(u.group)}${u.subgroup ? " — " + FTS.esc(u.subgroup) : ""}
+        </div>
+      </div>
+      <div class="user-actions">
+        <button class="btn-action btn-modify" onclick="openModModal('${id}')">✎ Éditer</button>
+        <button class="btn-action btn-revoke" onclick="revokeUser('${id}')">✕ Révoquer</button>
+      </div>
+    </div>`).join("");
+}
+
+/* ── ACTIONS UTILISATEURS ────────────────────────────────────── */
+function approveUser(id) { db.ref("fts_forum/users/" + id + "/status").set("active"); }
+function refuseUser(id)  { if (confirm("Refuser cet utilisateur ?"))  db.ref("fts_forum/users/" + id + "/status").set("refused"); }
+function revokeUser(id)  { if (confirm("Révoquer cet utilisateur ?")) db.ref("fts_forum/users/" + id + "/status").set("refused"); }
+
+/* ── MODALE MODIFICATION ─────────────────────────────────────── */
+function openModModal(id) {
+  const u      = allUsers[id];
+  const uCats  = (u.group    || "").split(", ").filter(Boolean);
+  const uSubs  = (u.subgroup || "").split(", ").filter(Boolean);
+  const cats   = [...new Set(allGroups.map(g => g.cat))];
+
+  document.getElementById("mod-uid").value = id;
+
+  // ✅ FTS.esc() remplace esc()
+  document.getElementById("mod-cat-pills").innerHTML = cats.map(c =>
+    `<div class="pill ${uCats.includes(c) ? 'active' : ''}" onclick="toggleModPill(this,'cat')">${FTS.esc(c)}</div>`
+  ).join("");
+
+  updateModSubGroups(uSubs);
+  document.getElementById("mod-modal").classList.remove("hidden");
+}
+
+function toggleModPill(el, type) {
+  el.classList.toggle("active");
+  if (type === 'cat') {
+    const activeSubs = Array.from(document.querySelectorAll(".mod-sub-pills .pill.active")).map(p => p.textContent);
+    updateModSubGroups(activeSubs);
+  }
+}
+
+function updateModSubGroups(selectedSubs) {
+  const activeCats = Array.from(document.querySelectorAll("#mod-cat-pills .pill.active")).map(p => p.textContent);
+  const wrap       = document.getElementById("mod-sub-groups");
+
+  if (!activeCats.length) { wrap.innerHTML = ""; return; }
+
+  wrap.innerHTML = activeCats.map(cat => {
+    const subs = [...new Set(allGroups.filter(g => g.cat === cat && g.sub).map(g => g.sub))];
+    if (!subs.length) {
+      return `<div class="sub-group">
+                <div class="sub-group-lbl">${FTS.esc(cat)}</div>
+                <p class="no-sub-note">Pas de créneau spécifique.</p>
+              </div>`;
+    }
+    return `<div class="sub-group">
+              <div class="sub-group-lbl">${FTS.esc(cat)}</div>
+              <div class="pill-container mod-sub-pills">
+                ${subs.map(s =>
+                  `<div class="pill ${selectedSubs.includes(s) ? 'active' : ''}" onclick="toggleModPill(this,'sub')">${FTS.esc(s)}</div>`
+                ).join("")}
+              </div>
+            </div>`;
+  }).join("");
+}
+
+function saveModification() {
+  const id   = document.getElementById("mod-uid").value;
+  const cats = Array.from(document.querySelectorAll("#mod-cat-pills .pill.active")).map(p => p.textContent);
+  const subs = Array.from(document.querySelectorAll(".mod-sub-pills .pill.active")).map(p => p.textContent);
+  db.ref("fts_forum/users/" + id).update({
+    group:    cats.join(", "),
+    subgroup: subs.join(", "),
+    status:   "active",
+  });
+  closeModModal();
+}
+
+function closeModModal() { document.getElementById("mod-modal").classList.add("hidden"); }
+
+/* ── ONGLET MESSAGES ─────────────────────────────────────────── */
+function buildChannelSelector() {
+  db.ref("fts_forum/messages").once("value", snap => {
+    const channels = ["general", ...Object.keys(snap.val() || {})]
+      .filter((v, i, a) => a.indexOf(v) === i);
+
+    document.getElementById("ch-selector").innerHTML = channels.map(c =>
+      `<div class="ch-tag ${c === currentMsgChannel ? 'active' : ''}" onclick="loadMsgChannel('${c}')">${c}</div>`
+    ).join("");
+
+    loadMsgChannel(currentMsgChannel);
+  });
+}
+
+function loadMsgChannel(ch) {
+  currentMsgChannel = ch;
+  document.querySelectorAll(".ch-tag").forEach(el => {
+    el.classList.toggle("active", el.textContent === ch);
+  });
+
+  db.ref("fts_forum/messages/" + ch).limitToLast(50).once("value", snap => {
+    const list = document.getElementById("msg-list");
+    if (!snap.exists()) {
+      list.innerHTML = '<div class="empty-msg">Aucun message dans ce canal.</div>';
+      return;
+    }
+    // ✅ FTS.esc() remplace esc()
+    list.innerHTML = Object.entries(snap.val()).reverse().map(([mid, m]) => `
+      <div class="msg-item">
+        <div class="msg-body">
+          <div class="msg-author-name">${FTS.esc(m.name)}</div>
+          <div class="msg-text">${FTS.esc(m.text)}</div>
+          <div class="msg-time">${fmtDate(m.ts)}</div>
+        </div>
+        <button class="btn-del" onclick="delMsg('${ch}', '${mid}')">🗑</button>
+      </div>`).join("");
+  });
+}
+
+function delMsg(ch, mid) {
+  if (confirm("Supprimer ce message ?")) {
+    db.ref("fts_forum/messages/" + ch + "/" + mid)
+      .remove()
+      .then(() => loadMsgChannel(ch));
+  }
+}
+
+/* ── NAVIGATION ONGLETS ──────────────────────────────────────── */
+function showTab(id, btn) {
+  document.querySelectorAll(".tab-content, .tab-btn").forEach(el => el.classList.remove("active"));
+  document.getElementById("tab-" + id).classList.add("active");
+  btn.classList.add("active");
+}
+</script>
+
+<!-- ✅ fts-pwa.js → SW registration (pas d'install bar sur cette page) -->
+<script src="assets/js/fts-pwa.js"></script>
+
+</body>
+</html>
