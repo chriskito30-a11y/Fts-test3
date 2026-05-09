@@ -3,40 +3,30 @@
    À inclure en dernier dans toutes les pages (avant </body>).
    Nécessite un élément #install-bar dans le HTML de la page.
    ================================================================ */
-
 'use strict';
-
-
 /* ── REGISTRATION SERVICE WORKER ─────────────────────────────── */
-
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(() => console.log('[FTS] Service Worker enregistré'))
       .catch(err => console.warn('[FTS] SW registration failed:', err));
   });
 }
-
-
 /* ── INSTALL PROMPT PWA ───────────────────────────────────────── */
-
 (function() {
   // Si déjà refusé, on n'affiche plus
   if (localStorage.getItem('fts_install_dismissed')) return;
-
   const bar      = document.getElementById('install-bar');
   if (!bar) return;
-
   const msg      = document.getElementById('install-msg');
   const btn      = document.getElementById('btn-install');
   const closeBtn = document.getElementById('btn-close-bar');
   let deferredPrompt = null;
-
   function show() { bar.classList.add('show'); }
   function hide() {
     bar.classList.remove('show');
     localStorage.setItem('fts_install_dismissed', '1');
   }
-
   // iOS — instruction manuelle
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
   if (isIOS && !window.navigator.standalone) {
@@ -44,7 +34,6 @@ if ('serviceWorker' in navigator) {
     if (btn) btn.style.display = 'none';
     show();
   }
-
   // Android / Chrome — prompt natif
   window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
@@ -53,7 +42,6 @@ if ('serviceWorker' in navigator) {
     if (btn) btn.style.display = '';
     show();
   });
-
   if (btn) {
     btn.addEventListener('click', function() {
       if (!deferredPrompt) return;
@@ -64,7 +52,6 @@ if ('serviceWorker' in navigator) {
       });
     });
   }
-
   if (closeBtn) {
     closeBtn.addEventListener('click', hide);
   }
