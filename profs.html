@@ -44,6 +44,17 @@
 .bnav-icon { font-size: 1.3rem; line-height: 1; }
 .bnav-spacer { height: 72px; }
 
+/* Badge non lus */
+.bnav-icon-wrap { position: relative; display: inline-block; line-height: 1; }
+.bnav-badge {
+  position: absolute; top: -5px; right: -8px;
+  background: var(--red); color: #fff;
+  font-size: .5rem; font-weight: 700;
+  min-width: 14px; height: 14px; padding: 0 3px;
+  border-radius: 7px; text-align: center; line-height: 14px;
+  border: 2px solid #0a0a0a; display: none;
+}
+
 /* ── TABS ─────────────────────────────────────────────────────── */
 .tabs-row {
   display: flex; gap: 0;
@@ -222,7 +233,11 @@
       <span class="bnav-icon">👤</span><span>Membres</span>
     </a>
     <a href="messages.html" class="bnav-item">
-      <span class="bnav-icon">✉️</span><span>Messages</span>
+      <span class="bnav-icon-wrap">
+        <span class="bnav-icon">✉️</span>
+        <span class="bnav-badge" id="msg-badge">0</span>
+      </span>
+      <span>Messages</span>
     </a>
     <a href="forum.html" class="bnav-item">
       <span class="bnav-icon">💬</span><span>Forum</span>
@@ -497,6 +512,9 @@ window.addEventListener("DOMContentLoaded", function() {
       if (userProfile.role === "admin") {
         document.getElementById("bnav-admin").style.display = "flex";
       }
+
+      // Badge non lus messages
+      listenUnreadBadge(user.uid);
 
       // Construire les sélecteurs de catégories
       buildCatSelectors();
@@ -809,6 +827,28 @@ async function saveEdit() {
   } catch(e) {
     alert("Erreur lors de la modification.");
   }
+}
+
+/* ── BADGE NON LUS ────────────────────────────────────────────── */
+function listenUnreadBadge(uid) {
+  const db = FTS.initFirebase ? firebase.database() : null;
+  if (!db) return;
+  db.ref('fts_dm/userConvs/' + uid).on('value', async snap => {
+    const convIds = snap.val() ? Object.keys(snap.val()) : [];
+    if (!convIds.length) { updateMsgBadge(0); return; }
+    let total = 0;
+    await Promise.all(convIds.map(id =>
+      db.ref('fts_dm/conversations/' + id + '/unread/' + uid).once('value')
+        .then(s => { total += (s.val() || 0); })
+    ));
+    updateMsgBadge(total);
+  });
+}
+function updateMsgBadge(count) {
+  const el = document.getElementById('msg-badge');
+  if (!el) return;
+  if (count > 0) { el.textContent = count > 99 ? '99+' : count; el.style.display = 'inline-block'; }
+  else { el.style.display = 'none'; }
 }
 
 /* ── UTILITAIRES ──────────────────────────────────────────────── */
