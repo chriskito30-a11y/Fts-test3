@@ -318,6 +318,14 @@
       <span class="bnav-icon">💬</span>
       <span>Forum</span>
     </a>
+    <a href="profs.html" class="bnav-item" id="bnav-profs" style="display:none">
+      <span class="bnav-icon">🎓</span>
+      <span>Profs</span>
+    </a>
+    <a href="forum-admin.html" class="bnav-item" id="bnav-admin" style="display:none">
+      <span class="bnav-icon">🛡</span>
+      <span>Admin</span>
+    </a>
   </nav>
 
   <div class="wrap">
@@ -480,6 +488,14 @@ const ICONS = {
       // Nom d'affichage
       document.getElementById('user-display-name').textContent =
         userProfile.firstName || userProfile.name || user.email;
+
+      // Liens nav selon rôle
+      if (userProfile.role === 'admin') {
+        document.getElementById('bnav-profs').style.display = 'flex';
+        document.getElementById('bnav-admin').style.display = 'flex';
+      } else if (userProfile.role === 'prof') {
+        document.getElementById('bnav-profs').style.display = 'flex';
+      }
 
       // Filtrage des catégories selon les disciplines
       applyDisciplineFilter(userProfile);
