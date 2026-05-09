@@ -1,7 +1,5 @@
-const CACHE = 'fts-v3';
+const CACHE = 'fts-v4';
 const FILES = [
-  './membres.html',
-  './index.html',
   './manifest.json',
   './fts192.png',
   './fts512.png',
@@ -9,7 +7,11 @@ const FILES = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)));
+  e.waitUntil(
+    caches.open(CACHE).then(cache =>
+      Promise.allSettled(FILES.map(f => cache.add(f)))
+    )
+  );
   self.skipWaiting();
 });
 
