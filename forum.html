@@ -6,200 +6,514 @@
 <title>Forum — Fais Ton Show</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
-<!-- Firebase SDK — Auth ajouté -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-function setH(){document.documentElement.style.setProperty("--app-h",window.innerHeight+"px");}
-setH();window.addEventListener("resize",setH);
-window.addEventListener("orientationchange",function(){setTimeout(setH,200);});
+/* Viewport height fix iOS */
+function setH() { document.documentElement.style.setProperty("--vh", window.innerHeight + "px"); }
+setH();
+window.addEventListener("resize", setH);
+window.addEventListener("orientationchange", () => setTimeout(setH, 200));
 </script>
 
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{--black:#0a0a0a;--white:#f5f2ee;--red:#d4201a;--gold:#c9a84c;--grey:#1c1c1c;--grey2:#161616;--muted:#888;--border:#2a2a2a;--pending:#c9a84c}
-html,body{height:100%;background:var(--black);color:var(--white);font-family:"DM Sans",sans-serif;overflow:hidden}
-.app{display:flex;height:100vh;height:calc(var(--app-h,100vh))}
+/* ══ RESET ══════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
 
-/* ── AUTH LOADING ── */
-.auth-loading{position:fixed;inset:0;background:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:9999}
-.auth-loading-logo{font-family:"Bebas Neue",sans-serif;font-size:2rem;color:var(--white)}
-.auth-loading-logo span{color:var(--red)}
-.auth-loading-sub{font-size:.65rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
-.spinner{width:24px;height:24px;border:2px solid #333;border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+/* ══ VARIABLES ══════════════════════════════════════════════════════ */
+:root {
+  --black:  #0a0a0a;
+  --white:  #f5f2ee;
+  --red:    #d4201a;
+  --gold:   #c9a84c;
+  --grey:   #1c1c1c;
+  --grey2:  #141414;
+  --muted:  #888;
+  --border: #2a2a2a;
+}
 
-/* Sidebar */
-.sidebar{width:220px;background:var(--grey2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
-.sidebar-hdr{padding:1.2rem 1rem .8rem;border-bottom:1px solid var(--border)}
-.sidebar-logo{font-family:"Bebas Neue",sans-serif;font-size:1.3rem;color:var(--red)}
-.sidebar-sub{font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:.1rem}
-.sidebar-user{display:flex;align-items:center;gap:.5rem;padding:.7rem 1rem;border-bottom:1px solid var(--border)}
-.uavatar{width:26px;height:26px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:600;color:var(--white);flex-shrink:0;text-transform:uppercase}
-.uname{font-size:.78rem;color:var(--muted);flex:1}
-.channels-lbl{font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;color:#444;padding:.8rem 1rem .4rem}
-.channel-list{flex:1;overflow-y:auto;padding:.2rem 0}
-.channel{display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;cursor:pointer;transition:background .15s;border-left:2px solid transparent;font-size:.82rem;color:var(--muted)}
-.channel:hover{background:rgba(255,255,255,.03);color:var(--white)}
-.channel.active{background:rgba(212,32,26,.08);border-left-color:var(--red);color:var(--white)}
-.channel-icon{font-size:1rem;flex-shrink:0}
-.sidebar-footer{padding:.8rem 1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.5rem}
-.back-link{font-size:.68rem;color:#444;text-decoration:none;display:flex;align-items:center;gap:.35rem;transition:color .2s}
-.back-link:hover{color:var(--muted)}
-.btn-signout-forum{background:transparent;border:1px solid #222;color:#444;padding:.35rem .7rem;border-radius:2px;cursor:pointer;font-size:.65rem;font-family:"DM Sans",sans-serif;transition:all .2s;text-align:left}
-.btn-signout-forum:hover{border-color:var(--red);color:var(--red)}
-.msg-badge-inline{background:var(--red);color:#fff;font-size:.5rem;font-weight:700;min-width:14px;height:14px;padding:0 3px;border-radius:7px;text-align:center;line-height:14px;display:none;margin-left:.3rem;vertical-align:middle}
+html, body {
+  height: 100%; height: calc(var(--vh, 100vh));
+  background: var(--black); color: var(--white);
+  font-family: "DM Sans", sans-serif; overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
 
-/* Main */
-.main{flex:1;display:flex;flex-direction:column;min-width:0}
-.pending-bar{background:#1a1500;border-bottom:1px solid rgba(201,168,76,.3);padding:.55rem 1.4rem;font-size:.72rem;color:var(--gold);display:none;align-items:center;gap:.5rem;flex-shrink:0}
-.pending-bar.show{display:flex}
-.chat-hdr{padding:.9rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.8rem;flex-shrink:0;background:var(--grey2)}
-.chat-icon{font-size:1.3rem}
-.chat-title{font-family:"Bebas Neue",sans-serif;font-size:1.3rem;letter-spacing:.04em}
-.chat-desc{font-size:.7rem;color:var(--muted);margin-top:.05rem}
-.btn-admin-gear{background:transparent;border:none;cursor:pointer;font-size:1.1rem;padding:.2rem .4rem;opacity:.3;transition:opacity .2s;margin-left:.4rem;display:none}
-.btn-admin-gear:hover{opacity:1}
-.btn-admin-gear.active{opacity:1;filter:drop-shadow(0 0 4px var(--red))}
-.btn-admin-gear.visible{display:inline-flex}
-.btn-admin-link{display:none;align-items:center;gap:.3rem;padding:.3rem .7rem;background:transparent;border:1px solid #333;border-radius:2px;color:#555;font-size:.65rem;text-decoration:none;transition:all .2s;white-space:nowrap}
-.btn-admin-link:hover{border-color:var(--red);color:var(--white)}
-.btn-admin-link.visible{display:inline-flex}
-.btn-profs-link{display:none;align-items:center;gap:.3rem;padding:.3rem .7rem;background:transparent;border:1px solid #333;border-radius:2px;color:#555;font-size:.65rem;text-decoration:none;transition:all .2s;white-space:nowrap}
-.btn-profs-link:hover{border-color:var(--gold);color:var(--gold)}
-.btn-profs-link.visible{display:inline-flex}
-.admin-bar{background:#1a0a0a;border-bottom:1px solid #3a1a1a;padding:.4rem 1.4rem;font-size:.68rem;color:#aa5a5a;display:none;align-items:center;justify-content:space-between;flex-shrink:0}
-.admin-bar.show{display:flex}
-.btn-exit-admin{background:transparent;border:1px solid #3a1a1a;color:#aa5a5a;padding:.2rem .6rem;border-radius:2px;cursor:pointer;font-size:.65rem}
-.btn-exit-admin:hover{border-color:var(--red);color:var(--white)}
+/* ══ AUTH LOADING ═══════════════════════════════════════════════════ */
+.auth-loading {
+  position: fixed; inset: 0; background: var(--black);
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 1rem; z-index: 9999;
+}
+.auth-logo { font-family: "Bebas Neue", sans-serif; font-size: 2.5rem; letter-spacing: .04em; }
+.auth-logo span { color: var(--red); }
+.auth-sub { font-size: .6rem; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; }
+.spinner {
+  width: 24px; height: 24px; border: 2px solid #2a2a2a;
+  border-top-color: var(--red); border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══ APP SHELL ══════════════════════════════════════════════════════ */
+.app {
+  display: flex;
+  height: 100vh; height: calc(var(--vh, 100vh));
+  overflow: hidden; position: relative;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════════════════════════════════ */
+.sidebar {
+  width: 290px; min-width: 290px;
+  background: var(--grey2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  flex-shrink: 0;
+  transition: transform .3s cubic-bezier(.4, 0, .2, 1);
+  will-change: transform;
+  z-index: 2;
+}
+
+/* En-tête */
+.sb-hdr {
+  display: flex; align-items: center; gap: .8rem;
+  padding: 1rem 1rem .9rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0; background: var(--grey2);
+}
+.sb-logo {
+  flex: 1;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.2rem; letter-spacing: .04em;
+}
+.sb-logo span { color: var(--red); }
+.sb-forum-badge {
+  font-size: .55rem; color: var(--muted); letter-spacing: .14em;
+  text-transform: uppercase; display: block; margin-top: .05rem;
+}
+
+/* User row */
+.sb-user {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.uavatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--red);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 600; color: #fff;
+  flex-shrink: 0; text-transform: uppercase;
+}
+.uavatar.pending { background: var(--gold); }
+.uname { font-size: .8rem; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Arborescence */
+.channel-tree {
+  flex: 1; overflow-y: auto; padding: .3rem 0;
+}
+.channel-tree::-webkit-scrollbar { width: 3px; }
+.channel-tree::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+
+/* Chargement CSV */
+.csv-loading {
+  padding: 1rem; font-size: .72rem; color: #444;
+  display: flex; align-items: center; gap: .5rem;
+}
+.csv-spinner {
+  width: 12px; height: 12px; border: 1.5px solid #333;
+  border-top-color: var(--muted); border-radius: 50%;
+  animation: spin .7s linear infinite; flex-shrink: 0;
+}
+
+/* Séparateur */
+.tree-sep { height: 1px; background: var(--border); margin: .4rem 0; }
+
+/* Header catégorie */
+.cat-section {}
+.cat-hdr {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .85rem 1rem .3rem;
+  font-size: .57rem; letter-spacing: .16em; text-transform: uppercase;
+  color: #4a4a4a; cursor: pointer; user-select: none;
+  transition: color .15s;
+}
+.cat-hdr:hover { color: #666; }
+.cat-hdr-icon { font-size: .9rem; }
+.cat-hdr-name { flex: 1; }
+.cat-toggle { font-size: .55rem; transition: transform .22s; opacity: .6; }
+.cat-section.collapsed .cat-toggle { transform: rotate(-90deg); }
+
+/* Sous-items avec animation */
+.cat-subs {
+  overflow: hidden;
+  max-height: 9999px;
+  transition: max-height .28s ease;
+}
+.cat-section.collapsed .cat-subs { max-height: 0; }
+
+/* Canal */
+.channel {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .5rem 1rem;
+  cursor: pointer; border-left: 2px solid transparent;
+  font-size: .83rem; color: var(--muted);
+  transition: background .12s, color .12s;
+}
+.channel.sub { padding-left: 1.8rem; font-size: .8rem; }
+.channel.sub .channel-icon { font-size: .85rem; }
+.channel:hover { background: rgba(255,255,255,.03); color: var(--white); }
+.channel.active {
+  background: rgba(212,32,26,.09);
+  border-left-color: var(--red);
+  color: var(--white);
+}
+.channel-icon { font-size: .95rem; flex-shrink: 0; }
+.channel-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Footer sidebar */
+.sb-footer {
+  padding: .8rem 1rem;
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: .5rem;
+  flex-shrink: 0;
+  padding-bottom: calc(.8rem + env(safe-area-inset-bottom));
+}
+.btn-notif {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); padding: .4rem .85rem;
+  border-radius: 20px; cursor: pointer;
+  font-size: .68rem; font-family: "DM Sans", sans-serif;
+  transition: all .2s; width: 100%; text-align: left;
+}
+.btn-notif:hover { border-color: var(--gold); color: var(--gold); }
+.btn-notif.on { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,.08); }
+.sb-link {
+  font-size: .68rem; color: #444; text-decoration: none;
+  display: flex; align-items: center; gap: .4rem;
+  transition: color .2s;
+}
+.sb-link:hover { color: var(--muted); }
+.msg-badge-inline {
+  background: var(--red); color: #fff; font-size: .5rem; font-weight: 700;
+  min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px;
+  text-align: center; line-height: 14px; display: none;
+}
+.btn-signout {
+  background: transparent; border: 1px solid #222; color: #444;
+  padding: .35rem .7rem; border-radius: 2px; cursor: pointer;
+  font-size: .65rem; font-family: "DM Sans", sans-serif;
+  transition: all .2s; text-align: left; width: 100%;
+}
+.btn-signout:hover { border-color: var(--red); color: var(--red); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   MAIN — Zone chat
+══════════════════════════════════════════════════════════════════════ */
+.main {
+  flex: 1; display: flex; flex-direction: column;
+  background: var(--black); min-width: 0; overflow: hidden;
+  transition: transform .3s cubic-bezier(.4, 0, .2, 1);
+  will-change: transform;
+}
+
+/* État vide (desktop sans sélection) */
+.chat-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1rem; text-align: center; padding: 2rem;
+}
+.chat-empty-icon { font-size: 3rem; opacity: .15; }
+.chat-empty p { font-size: .85rem; color: #333; line-height: 1.7; }
+
+/* Barres de statut */
+.pending-bar {
+  background: #1a1500; border-bottom: 1px solid rgba(201,168,76,.3);
+  padding: .55rem 1.4rem; font-size: .72rem; color: var(--gold);
+  display: none; align-items: center; gap: .5rem; flex-shrink: 0;
+}
+.pending-bar.show { display: flex; }
+
+.admin-bar {
+  background: #1a0a0a; border-bottom: 1px solid #3a1a1a;
+  padding: .4rem 1.4rem; font-size: .68rem; color: #aa5a5a;
+  display: none; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.admin-bar.show { display: flex; }
+.btn-exit-admin {
+  background: transparent; border: 1px solid #3a1a1a; color: #aa5a5a;
+  padding: .2rem .6rem; border-radius: 2px; cursor: pointer; font-size: .65rem;
+}
+.btn-exit-admin:hover { border-color: var(--red); color: var(--white); }
+
+/* En-tête chat */
+.chat-hdr {
+  padding: .85rem 1.2rem; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: .7rem;
+  flex-shrink: 0; background: var(--grey2);
+}
+.btn-back {
+  display: none; /* affiché en CSS mobile */
+  background: transparent; border: none; color: var(--muted);
+  cursor: pointer; font-size: 1.5rem; padding: 0 .2rem;
+  transition: color .2s; flex-shrink: 0; line-height: 1;
+}
+.btn-back:hover { color: var(--white); }
+.chat-icon-wrap { font-size: 1.2rem; flex-shrink: 0; }
+.chat-info { flex: 1; min-width: 0; }
+.chat-title {
+  font-family: "Bebas Neue", sans-serif; font-size: 1.2rem;
+  letter-spacing: .04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chat-desc { font-size: .68rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hdr-actions { display: flex; align-items: center; gap: .4rem; flex-shrink: 0; }
+.btn-hdr-link {
+  display: flex; align-items: center; gap: .3rem;
+  padding: .3rem .7rem; background: transparent; border: 1px solid #333;
+  border-radius: 2px; color: #555; font-size: .65rem;
+  text-decoration: none; transition: all .2s; white-space: nowrap;
+}
+.btn-hdr-link.prof:hover { border-color: var(--gold); color: var(--gold); }
+.btn-hdr-link.admin:hover { border-color: var(--red); color: var(--white); }
+.btn-admin-gear {
+  background: transparent; border: none; cursor: pointer;
+  font-size: 1rem; padding: .2rem .4rem; opacity: .3; transition: opacity .2s;
+}
+.btn-admin-gear:hover { opacity: 1; }
+.btn-admin-gear.active { opacity: 1; filter: drop-shadow(0 0 4px var(--red)); }
+
+/* Bannière notifications */
+.notif-banner {
+  background: linear-gradient(135deg, rgba(212,32,26,.12), rgba(201,168,76,.08));
+  border-bottom: 1px solid rgba(212,32,26,.25);
+  padding: .7rem 1.2rem; display: flex; align-items: center;
+  gap: .8rem; flex-shrink: 0;
+}
+.notif-banner.hidden { display: none; }
+.notif-banner-icon { font-size: 1.3rem; flex-shrink: 0; }
+.notif-banner-text { flex: 1; }
+.notif-banner-title { font-size: .78rem; font-weight: 500; }
+.notif-banner-sub { font-size: .65rem; color: var(--muted); }
+.notif-banner-btn {
+  background: var(--red); border: none; color: #fff;
+  padding: .4rem .9rem; border-radius: 20px;
+  font-size: .72rem; font-weight: 500; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+}
+.notif-banner-close {
+  background: transparent; border: none; color: #555;
+  font-size: 1rem; cursor: pointer; padding: .2rem; flex-shrink: 0;
+}
 
 /* Messages */
-.messages{flex:1;overflow-y:auto;padding:1rem 1.4rem;display:flex;flex-direction:column;gap:.5rem;scroll-behavior:smooth}
-.messages::-webkit-scrollbar{width:4px}
-.messages::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}
-.day-sep{text-align:center;margin:.8rem 0;position:relative}
-.day-sep::before{content:"";position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border)}
-.day-sep span{position:relative;background:var(--black);padding:0 .8rem;font-size:.6rem;color:#444;letter-spacing:.1em;text-transform:uppercase}
-.msg{display:flex;flex-direction:column;max-width:72%;animation:msgIn .18s ease}
-@keyframes msgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.msg.own{align-self:flex-end;align-items:flex-end}
-.msg.other{align-self:flex-start;align-items:flex-start}
-.msg-meta{font-size:.62rem;color:#555;margin-bottom:.2rem;display:flex;align-items:center;gap:.4rem}
-.msg.own .msg-meta{flex-direction:row-reverse}
-.msg-author{color:var(--gold);font-weight:500}
-.msg-bubble{padding:.55rem .85rem;border-radius:3px;font-size:.83rem;line-height:1.55;word-break:break-word}
-.msg.own .msg-bubble{background:rgba(212,32,26,.15);border:1px solid rgba(212,32,26,.25);border-bottom-right-radius:0}
-.msg.other .msg-bubble{background:#141414;border:1px solid var(--border);border-bottom-left-radius:0}
-.btn-del-msg{background:transparent;border:none;color:#555;cursor:pointer;font-size:.7rem;padding:.15rem .4rem;transition:color .2s;margin-top:.2rem;display:block}
-.btn-del-msg:hover{color:var(--red)}
-.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#333;text-align:center;gap:.5rem}
-.empty-icon{font-size:2.5rem;opacity:.3}
+.messages {
+  flex: 1; overflow-y: auto; padding: 1rem 1.2rem;
+  display: flex; flex-direction: column; gap: .5rem; scroll-behavior: smooth;
+}
+.messages::-webkit-scrollbar { width: 4px; }
+.messages::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
 
-/* Input */
-.input-area{padding:.9rem 1.4rem;padding-bottom:calc(.9rem + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--grey2);flex-shrink:0}
-.input-row{display:flex;gap:.6rem;align-items:flex-end}
-.input-wrap{flex:1;background:#0e0e0e;border:1px solid var(--border);border-radius:3px;display:flex;align-items:flex-end;transition:border-color .2s}
-.input-wrap:focus-within{border-color:rgba(212,32,26,.4)}
-.msg-input{flex:1;background:transparent;border:none;color:var(--white);font-family:"DM Sans",sans-serif;font-size:.83rem;padding:.65rem .85rem;resize:none;outline:none;max-height:120px;line-height:1.5}
-.msg-input::placeholder{color:#444}
-.btn-send{background:var(--red);border:none;color:var(--white);width:38px;height:38px;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0;font-size:1rem}
-.btn-send:hover{background:#b71815}
-.btn-attach{background:transparent;border:1px solid var(--border);color:var(--muted);width:38px;height:38px;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;font-size:1rem}
-.btn-attach:hover{border-color:var(--gold);color:var(--gold)}
-.upload-bar{display:none;padding:.5rem 1.4rem;background:#0e0e0e;border-top:1px solid var(--border);font-size:.72rem;color:var(--muted);flex-shrink:0;align-items:center;gap:.8rem}
-.upload-bar.show{display:flex}
-.upload-track{flex:1;background:#2a2a2a;border-radius:2px;height:4px;overflow:hidden}
-.upload-fill{height:100%;background:var(--red);width:0%;transition:width .2s;border-radius:2px}
-.msg-img{max-width:100%;max-height:260px;border-radius:3px;margin-top:.3rem;display:block;cursor:pointer}
-.msg-video{max-width:100%;max-height:260px;border-radius:3px;margin-top:.3rem;display:block}
-.msg-pdf{display:inline-flex;align-items:center;gap:.5rem;margin-top:.3rem;padding:.4rem .8rem;background:#141414;border:1px solid var(--border);border-radius:3px;font-size:.75rem;color:var(--gold);text-decoration:none}
-.msg-pdf:hover{border-color:var(--gold)}
-.pill-container{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.2rem}
-.pill{background:#141414;border:1px solid var(--border);padding:.4rem .7rem;border-radius:3px;font-size:.75rem;cursor:pointer;transition:all .15s;color:var(--muted);user-select:none}
-.pill:hover{border-color:#444;color:var(--white)}
-.pill.active{background:var(--red);border-color:var(--red);color:white;font-weight:500}
+.day-sep { text-align: center; margin: .8rem 0; position: relative; }
+.day-sep::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); }
+.day-sep span { position: relative; background: var(--black); padding: 0 .8rem; font-size: .6rem; color: #444; letter-spacing: .1em; text-transform: uppercase; }
 
-/* Notifications */
-.btn-notif{background:transparent;border:1px solid var(--border);color:var(--muted);padding:.35rem .8rem;border-radius:20px;cursor:pointer;font-size:.68rem;transition:all .2s;width:100%;text-align:left}
-.btn-notif:hover{border-color:var(--gold);color:var(--gold)}
-.btn-notif.on{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.1)}
-.notif-banner{background:linear-gradient(135deg,rgba(212,32,26,.15),rgba(201,168,76,.1));border-bottom:1px solid rgba(212,32,26,.3);padding:.8rem 1.4rem;display:flex;align-items:center;gap:.8rem;cursor:pointer;flex-shrink:0;transition:background .2s}
-.notif-banner:hover{background:linear-gradient(135deg,rgba(212,32,26,.25),rgba(201,168,76,.15))}
-.notif-banner.hidden{display:none}
-.notif-banner-icon{font-size:1.4rem;flex-shrink:0}
-.notif-banner-text{flex:1}
-.notif-banner-title{font-size:.8rem;font-weight:500;color:var(--white);margin-bottom:.1rem}
-.notif-banner-sub{font-size:.68rem;color:var(--muted)}
-.notif-banner-btn{background:var(--red);border:none;color:var(--white);padding:.45rem 1rem;border-radius:20px;font-size:.75rem;font-weight:500;cursor:pointer;white-space:nowrap;flex-shrink:0}
-.notif-banner-close{background:transparent;border:none;color:#555;font-size:1rem;cursor:pointer;padding:.2rem;flex-shrink:0;line-height:1}
-.notif-banner-close:hover{color:var(--muted)}
+.msg { display: flex; flex-direction: column; max-width: 72%; animation: msgIn .18s ease; }
+@keyframes msgIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.msg.own { align-self: flex-end; align-items: flex-end; }
+.msg.other { align-self: flex-start; align-items: flex-start; }
+.msg-meta { font-size: .62rem; color: #555; margin-bottom: .2rem; display: flex; align-items: center; gap: .4rem; }
+.msg.own .msg-meta { flex-direction: row-reverse; }
+.msg-author { color: var(--gold); font-weight: 500; }
+.msg-bubble { padding: .55rem .85rem; border-radius: 3px; font-size: .83rem; line-height: 1.55; word-break: break-word; }
+.msg.own .msg-bubble { background: rgba(212,32,26,.15); border: 1px solid rgba(212,32,26,.25); border-bottom-right-radius: 0; }
+.msg.other .msg-bubble { background: #141414; border: 1px solid var(--border); border-bottom-left-radius: 0; }
+.btn-del-msg { background: transparent; border: none; color: #555; cursor: pointer; font-size: .7rem; padding: .15rem .4rem; transition: color .2s; margin-top: .2rem; display: block; }
+.btn-del-msg:hover { color: var(--red); }
 
-@media(max-width:640px){
-  .sidebar{width:100%;height:auto;border-right:none;border-bottom:1px solid var(--border);flex-shrink:0}
-  .sidebar-hdr,.sidebar-user,.channels-lbl,.sidebar-footer{display:none}
-  .channel-list{display:flex;flex-direction:row;padding:.4rem .5rem;gap:.3rem;overflow-x:auto;width:100%}
-  .channel{padding:.4rem .75rem;border-left:none;border-bottom:2px solid transparent;border-radius:3px;white-space:nowrap;font-size:.75rem}
-  .channel.active{border-bottom-color:var(--red);background:rgba(212,32,26,.08)}
-  .app{flex-direction:column}
-  .main{flex:1;min-height:0}
-  .messages{padding:.8rem}
-  .msg{max-width:88%}
-  .input-area{padding:.7rem .8rem;padding-bottom:calc(.7rem + env(safe-area-inset-bottom))}
+.empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #2a2a2a; text-align: center; gap: .6rem; }
+.empty-icon { font-size: 2.5rem; }
+.empty-text { font-size: .8rem; }
+
+/* Médias */
+.msg-img { max-width: 100%; max-height: 260px; border-radius: 4px; margin-top: .3rem; display: block; cursor: pointer; }
+.msg-video { max-width: 100%; max-height: 260px; border-radius: 4px; margin-top: .3rem; display: block; }
+.msg-pdf { display: inline-flex; align-items: center; gap: .5rem; margin-top: .3rem; padding: .4rem .8rem; background: #141414; border: 1px solid var(--border); border-radius: 3px; font-size: .75rem; color: var(--gold); text-decoration: none; }
+.msg-pdf:hover { border-color: var(--gold); }
+
+/* Barre upload */
+.upload-bar { display: none; padding: .5rem 1.2rem; background: #0e0e0e; border-top: 1px solid var(--border); font-size: .72rem; color: var(--muted); flex-shrink: 0; align-items: center; gap: .8rem; }
+.upload-bar.show { display: flex; }
+.upload-track { flex: 1; background: #2a2a2a; border-radius: 2px; height: 4px; overflow: hidden; }
+.upload-fill { height: 100%; background: var(--red); width: 0%; transition: width .2s; border-radius: 2px; }
+
+/* Zone saisie */
+.input-area {
+  padding: .9rem 1.2rem;
+  padding-bottom: calc(.9rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--grey2); flex-shrink: 0;
+}
+.input-row { display: flex; gap: .6rem; align-items: flex-end; }
+.input-wrap {
+  flex: 1; background: #0e0e0e; border: 1px solid var(--border);
+  border-radius: 8px; display: flex; align-items: flex-end;
+  transition: border-color .2s;
+}
+.input-wrap:focus-within { border-color: rgba(212,32,26,.4); }
+.msg-input {
+  flex: 1; background: transparent; border: none; color: var(--white);
+  font-family: "DM Sans", sans-serif; font-size: .83rem;
+  padding: .65rem .85rem; resize: none; outline: none;
+  max-height: 120px; line-height: 1.5;
+}
+.msg-input::placeholder { color: #444; }
+.btn-send {
+  background: var(--red); border: none; color: #fff;
+  width: 38px; height: 38px; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s; flex-shrink: 0; font-size: 1rem;
+}
+.btn-send:hover { background: #b71815; }
+.btn-attach {
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  width: 38px; height: 38px; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s; flex-shrink: 0;
+}
+.btn-attach:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   MOBILE — Style WhatsApp
+══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+
+  /* Les deux panels sont en position absolue et couvrent toute la fenêtre */
+  .app { position: relative; overflow: hidden; }
+
+  .sidebar {
+    position: absolute;
+    inset: 0; width: 100%; min-width: 0;
+    border-right: none;
+    /* Par défaut visible */
+    transform: translateX(0);
+  }
+  /* Le sidebar glisse à gauche quand on entre dans un canal */
+  .sidebar.mobile-hidden {
+    transform: translateX(-100%);
+  }
+
+  .main {
+    position: absolute;
+    inset: 0;
+    /* Par défaut hors-écran à droite */
+    transform: translateX(100%);
+  }
+  /* Le main glisse depuis la droite */
+  .main.mobile-visible {
+    transform: translateX(0);
+  }
+
+  /* Afficher le bouton retour */
+  .btn-back { display: flex !important; }
+
+  /* Masquer les actions desktop dans le header mobile */
+  .hdr-actions .btn-hdr-link { display: none !important; }
+
+  /* Ajustements messages */
+  .msg { max-width: 88%; }
+  .messages { padding: .8rem; }
+  .input-area { padding: .7rem .8rem; padding-bottom: calc(.7rem + env(safe-area-inset-bottom)); }
+
+  /* Cat headers plus compacts */
+  .cat-hdr { padding: .75rem .85rem .25rem; }
+  .channel { padding: .55rem .85rem; }
+  .channel.sub { padding-left: 1.6rem; }
 }
 </style>
 </head>
 <body>
 
-<!-- ── ÉCRAN DE CHARGEMENT AUTH ── -->
+<!-- ── AUTH LOADING ── -->
 <div class="auth-loading" id="auth-loading">
-  <div class="auth-loading-logo">FAIS TON <span>SHOW</span></div>
+  <div class="auth-logo">FAIS TON <span>SHOW</span></div>
   <div class="spinner"></div>
-  <div class="auth-loading-sub">Chargement du forum…</div>
+  <div class="auth-sub">Chargement du forum…</div>
 </div>
 
-<!-- ── APPLICATION (cachée jusqu'à auth OK) ── -->
+<!-- ── APP ── -->
 <div class="app" id="app" style="display:none">
-  <div class="sidebar">
-    <div class="sidebar-hdr">
-      <div class="sidebar-logo">FAIS TON SHOW</div>
-      <div class="sidebar-sub">Forum</div>
+
+  <!-- ═══════ SIDEBAR ═══════ -->
+  <div class="sidebar" id="sidebar">
+
+    <div class="sb-hdr">
+      <div>
+        <div class="sb-logo">FAIS TON <span>SHOW</span></div>
+        <span class="sb-forum-badge">Forum communautaire</span>
+      </div>
     </div>
-    <div class="sidebar-user">
+
+    <div class="sb-user">
       <div class="uavatar" id="uavatar">?</div>
       <div class="uname" id="uname">…</div>
     </div>
-    <div class="channels-lbl">Canaux</div>
-    <div class="channel-list" id="channel-list"></div>
-    <div class="sidebar-footer">
-      <button class="btn-notif" id="btn-notif" onclick="toggleNotifications()">🔕 Activer les notifs</button>
-      <a class="back-link" href="membres.html">← Espace membres</a>
-      <a class="back-link" href="messages.html">✉️ Messages privés <span class="msg-badge-inline" id="msg-badge">0</span></a>
-      <button class="btn-signout-forum" onclick="doSignOut()">Déconnexion</button>
-    </div>
-  </div>
 
-  <div class="main">
-    <div class="pending-bar" id="pending-bar">⏳ Accès en attente de validation</div>
+    <!-- Arborescence des canaux (générée dynamiquement) -->
+    <div class="channel-tree" id="channel-tree">
+      <div class="csv-loading">
+        <div class="csv-spinner"></div>
+        <span>Chargement des canaux…</span>
+      </div>
+    </div>
+
+    <div class="sb-footer">
+      <button class="btn-notif" id="btn-notif" onclick="toggleNotifications()">🔕 Activer les notifs</button>
+      <a class="sb-link" href="membres.html">← Espace membres</a>
+      <a class="sb-link" href="messages.html">
+        ✉️ Messages privés
+        <span class="msg-badge-inline" id="msg-badge"></span>
+      </a>
+      <button class="btn-signout" onclick="doSignOut()">Déconnexion</button>
+    </div>
+
+  </div>
+  <!-- /sidebar -->
+
+  <!-- ═══════ MAIN ═══════ -->
+  <div class="main" id="main">
+
+    <!-- Barre état en attente -->
+    <div class="pending-bar" id="pending-bar">⏳ Ton accès est en attente de validation</div>
+
+    <!-- Barre admin -->
     <div class="admin-bar" id="admin-bar">
       ⚠️ Mode administration actif
       <button class="btn-exit-admin" onclick="exitAdmin()">Quitter</button>
     </div>
+
+    <!-- En-tête du canal -->
     <div class="chat-hdr">
-      <div class="chat-icon" id="ch-icon">💬</div>
-      <div>
+      <button class="btn-back" id="btn-back" onclick="goBack()" title="Retour">‹</button>
+      <div class="chat-icon-wrap" id="ch-icon">💬</div>
+      <div class="chat-info">
         <div class="chat-title" id="ch-title">Général</div>
-        <div class="chat-desc" id="ch-desc">Discussion ouverte à tous</div>
+        <div class="chat-desc"  id="ch-desc">Discussion ouverte à tous</div>
       </div>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:.5rem">
-        <!-- Visible pour les profs et admins -->
-        <a class="btn-profs-link" id="btn-profs-link" href="profs.html">🎓 Profs</a>
-        <!-- Visible uniquement pour les admins -->
-        <a class="btn-admin-link" id="btn-admin-link" href="forum-admin.html">🛡 Admin</a>
-        <button class="btn-admin-gear" id="btn-gear" onclick="toggleAdminMode()">⚙️</button>
+      <div class="hdr-actions">
+        <a class="btn-hdr-link prof"  id="btn-profs-link" href="profs.html"        style="display:none">🎓 Profs</a>
+        <a class="btn-hdr-link admin" id="btn-admin-link" href="forum-admin.html"  style="display:none">🛡 Admin</a>
+        <button class="btn-admin-gear" id="btn-gear" onclick="toggleAdminMode()"   style="display:none">⚙️</button>
       </div>
     </div>
+
+    <!-- Bannière notifications -->
     <div class="notif-banner hidden" id="notif-banner">
       <span class="notif-banner-icon">🔔</span>
       <div class="notif-banner-text">
@@ -209,33 +523,46 @@ html,body{height:100%;background:var(--black);color:var(--white);font-family:"DM
       <button class="notif-banner-btn" onclick="activerNotifs()">Activer</button>
       <button class="notif-banner-close" onclick="fermerBanniere()">✕</button>
     </div>
-    <div class="messages" id="messages"></div>
+
+    <!-- Messages -->
+    <div class="messages" id="messages">
+      <div class="empty-state">
+        <div class="empty-icon">💬</div>
+        <div class="empty-text">Sélectionne un canal pour commencer</div>
+      </div>
+    </div>
+
+    <!-- Barre upload -->
     <div class="upload-bar" id="upload-bar">
       <span id="upload-txt">Upload en cours…</span>
       <div class="upload-track"><div class="upload-fill" id="upload-fill"></div></div>
     </div>
+
+    <!-- Saisie message -->
     <div class="input-area">
       <div class="input-row">
-        <input type="file" id="file-input" accept="image/*,video/*,.pdf,.mp3" style="display:none" onchange="uploadMedia(this.files[0])">
+        <input type="file" id="file-input" accept="image/*,video/*,.pdf,.mp3"
+          style="display:none" onchange="uploadMedia(this.files[0])">
         <button class="btn-attach" onclick="document.getElementById('file-input').click()" title="Joindre un fichier">📎</button>
         <div class="input-wrap">
-          <textarea class="msg-input" id="msg-input" placeholder="Écris un message…" rows="1"
+          <textarea class="msg-input" id="msg-input"
+            placeholder="Écrire un message…" rows="1"
             onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
         </div>
         <button class="btn-send" onclick="sendMessage()">➤</button>
       </div>
     </div>
+
   </div>
+  <!-- /main -->
+
 </div>
+<!-- /app -->
 
 <script>
 /* ================================================================
-   FORUM.JS — Chat temps réel Firebase
-   ✅ Auth via Firebase Auth (remplace localStorage UID)
-   ✅ Admin détecté via role RTDB (remplace mot de passe en clair)
-   ✅ Canaux filtrés selon disciplines du profil
-   ================================================================ */
-
+   CONFIG
+================================================================ */
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyBlN-h7D-QWyGmZ4B59AVJkDIQ5molioq0",
   authDomain:        "faistonshow30.firebaseapp.com",
@@ -246,53 +573,157 @@ const FIREBASE_CONFIG = {
   appId:             "1:115713812172:web:db8db53a9a9ad819f00469"
 };
 
-const CLOUD_NAME   = "dsylvtwqr";
+const CLOUD_NAME    = "dsylvtwqr";
 const UPLOAD_PRESET = "FaisTonShow";
-const WORKER_URL   = "https://fts-push.gros-christophe.workers.dev";
+const WORKER_URL    = "https://fts-push.gros-christophe.workers.dev";
 const VAPID_PUBLIC_KEY = "BNenngaKqOtgqvFSo2KJipS0AwVChpzacAX5YSNZmizWLeji07auoKRZBMbOxRljvqz89QigB6esPcHfEDS_nik";
 
-let db;
-let uid, userData, userProfile;
-let currentChannel  = "general";
+/* URL du Google Sheet (CSV publié) — modifiable sans retoucher le code */
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6zQRcJLBGzmnrMQcFnnfiUwNTUbFTmL3Cg3Wv9HP6p9DXIVHlNdLd07a-QETaHX5NQ4mUr78lx_ox/pub?gid=199619478&single=true&output=csv";
+
+/* ── ÉTAT ─────────────────────────────────────────────────────────── */
+let db, uid, userData, userProfile;
+let currentChannel  = null;
 let currentListener = null;
 let adminMode       = false;
+let csvStructure    = [];   // [{category:str, subs:[{name,icon,desc}]}]
+let collapsedCats   = {};   // catId → boolean
+let csvLoaded       = false;
 
-/* ── UTILITAIRES ──────────────────────────────────────────────── */
-function norm(s){ return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); }
-function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-function catIcon(s){ const c=norm(s); if(c.includes("theat"))return"🎭"; if(c.includes("dans"))return"💃"; if(c.includes("chant"))return"🎤"; if(c.includes("musi"))return"🎸"; if(c.includes("singer"))return"⭐"; if(c.includes("comedie"))return"🎬"; if(c.includes("atelier"))return"🎨"; return"💬"; }
-function scrollBottom(){ const w=document.getElementById("messages"); w.scrollTop=w.scrollHeight; }
-function storageGet(k){ return localStorage.getItem(k); }
-function storageSet(k,v){ localStorage.setItem(k,v); }
+/* ── UTILITAIRES ──────────────────────────────────────────────────── */
+function norm(s) {
+  return String(s).toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+}
+function esc(s) {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+function catIcon(s) {
+  const c = norm(s);
+  if (c.includes("theat"))   return "🎭";
+  if (c.includes("dans"))    return "💃";
+  if (c.includes("chant"))   return "🎤";
+  if (c.includes("musi"))    return "🎸";
+  if (c.includes("singer"))  return "⭐";
+  if (c.includes("comedie")) return "🎬";
+  if (c.includes("atelier")) return "🎨";
+  if (c.includes("vocal"))   return "🎙️";
+  if (c.includes("forma"))   return "📚";
+  return "💬";
+}
+function scrollBottom() {
+  const w = document.getElementById("messages");
+  w.scrollTop = w.scrollHeight;
+}
+function storageGet(k) { return localStorage.getItem(k); }
+function storageSet(k, v) { localStorage.setItem(k, v); }
 
-/* ── INITIALISATION ───────────────────────────────────────────── */
-document.addEventListener("DOMContentLoaded", async function() {
+/* ── NAVIGATION MOBILE ────────────────────────────────────────────── */
+function goToChat() {
+  document.getElementById("sidebar").classList.add("mobile-hidden");
+  document.getElementById("main").classList.add("mobile-visible");
+}
+function goBack() {
+  document.getElementById("sidebar").classList.remove("mobile-hidden");
+  document.getElementById("main").classList.remove("mobile-visible");
+}
 
-  // Service Worker pour les notifications push
+/* ================================================================
+   CSV — Chargement et parsing dynamique
+   Structure attendue du tableur :
+     Colonne A = Catégorie
+     Colonne B = Sous-catégorie
+     Colonne C = Icône (optionnel)
+     Colonne D = Description (optionnel)
+================================================================ */
+function parseCSVLine(line) {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQuotes = !inQuotes; continue; }
+    if (c === "," && !inQuotes) { result.push(current.trim()); current = ""; continue; }
+    current += c;
+  }
+  result.push(current.trim());
+  return result;
+}
+
+async function loadCSV() {
+  try {
+    /* Cache-bust pour forcer la mise à jour depuis le tableur */
+    const resp = await fetch(CSV_URL + "&_t=" + Date.now());
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const text = await resp.text();
+
+    const lines = text.trim().split(/\r?\n/);
+    /* Ligne 0 = en-têtes → on commence à 1 */
+    const map = new Map(); // préserve l'ordre d'insertion
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCSVLine(lines[i]);
+      const cat  = (cols[0] || "").trim();
+      const sub  = (cols[1] || "").trim();
+      const ico  = (cols[2] || "").trim();
+      const desc = (cols[3] || "").trim();
+
+      if (!cat) continue;
+
+      if (!map.has(cat)) map.set(cat, { category: cat, subs: [] });
+
+      if (sub) {
+        map.get(cat).subs.push({
+          name: sub,
+          icon: ico  || "📅",
+          desc: desc || sub
+        });
+      }
+    }
+
+    csvStructure = Array.from(map.values());
+    csvLoaded = true;
+    console.log("[FTS] CSV chargé :", csvStructure.length, "catégories");
+
+    /* Si l'utilisateur est déjà connecté, on re-render les canaux */
+    if (userData) renderChannels();
+
+  } catch (e) {
+    console.warn("[FTS] Erreur CSV :", e.message);
+    csvLoaded = true;       // permet de continuer sans CSV
+    csvStructure = [];
+    if (userData) renderChannels();
+  }
+}
+
+/* ================================================================
+   INIT — Firebase + Auth
+================================================================ */
+document.addEventListener("DOMContentLoaded", async function () {
+
+  /* Service Worker (push notifications) */
   if ("serviceWorker" in navigator) {
-    try { await navigator.serviceWorker.register("./sw.js", {scope:"./"}); }
-    catch(e) { console.warn("[FTS] SW :", e); }
+    try { await navigator.serviceWorker.register("./sw.js", { scope: "./" }); }
+    catch (e) { console.warn("[FTS] SW :", e); }
   }
 
+  /* Firebase */
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.database();
-  } catch(e) {
-    console.warn("[FTS] Firebase init :", e);
-  }
+  } catch (e) { console.warn("[FTS] Firebase :", e); }
 
-  // Écoute de l'état d'authentification
+  /* Chargement CSV en parallèle (pas bloquant) */
+  loadCSV();
+
+  /* Écoute auth */
   firebase.auth().onAuthStateChanged(async user => {
-
-    if (!user) {
-      window.location.href = "auth.html";
-      return;
-    }
-
+    if (!user) { window.location.href = "auth.html"; return; }
     uid = user.uid;
-
     try {
-      // 1. Charger le profil principal (fts_users)
       const snap = await db.ref("fts_users/" + uid).once("value");
       userProfile = snap.val();
 
@@ -302,130 +733,261 @@ document.addEventListener("DOMContentLoaded", async function() {
         return;
       }
 
-      // 2. Admin détecté via le rôle — plus de mot de passe
-      // Boutons selon rôle
+      /* Rôles */
       if (userProfile.role === "admin") {
         adminMode = true;
-        document.getElementById("btn-gear").classList.add("visible", "active");
-        document.getElementById("btn-admin-link").classList.add("visible");
-        document.getElementById("btn-profs-link").classList.add("visible");
+        const gear = document.getElementById("btn-gear");
+        gear.style.display = "inline-flex"; gear.classList.add("active");
+        document.getElementById("btn-admin-link").style.display = "inline-flex";
+        document.getElementById("btn-profs-link").style.display = "inline-flex";
         document.getElementById("admin-bar").classList.add("show");
       } else if (userProfile.role === "prof") {
-        document.getElementById("btn-profs-link").classList.add("visible");
+        document.getElementById("btn-profs-link").style.display = "inline-flex";
       }
 
-      // 3. Charger ou créer le profil forum (fts_forum/users)
       await loadUserData();
-
-      // Badge non lus messages privés
       listenUnreadBadge(uid);
 
-      // 4. Afficher l'app
       document.getElementById("auth-loading").style.display = "none";
-      document.getElementById("app").style.display          = "flex";
+      document.getElementById("app").style.display = "flex";
 
-    } catch(e) {
-      console.warn("[FTS] Erreur chargement profil :", e);
+    } catch (e) {
+      console.warn("[FTS] Erreur profil :", e);
       window.location.href = "auth.html";
     }
   });
 });
 
-/* ── PROFIL FORUM ─────────────────────────────────────────────── */
+/* ── PROFIL UTILISATEUR ───────────────────────────────────────────── */
 async function loadUserData() {
   const snap = await db.ref("fts_forum/users/" + uid).once("value");
-
   if (snap.exists()) {
     userData = snap.val();
   } else {
-    // Création automatique depuis le profil principal (migration / premier accès)
     userData = {
-      name:     userProfile.name || userProfile.email,
+      name:     userProfile.name  || userProfile.email,
       group:    (userProfile.disciplines || []).join(", "),
       subgroup: "",
       status:   userProfile.status || "active",
-      ts:       Date.now(),
+      ts:       Date.now()
     };
     await db.ref("fts_forum/users/" + uid).set(userData);
   }
-
   listenUserStatus();
   enterForum();
 }
 
 function listenUserStatus() {
   db.ref("fts_forum/users/" + uid + "/status").on("value", snap => {
-    if (snap.exists()) {
-      userData.status = snap.val();
-      updateStatusUI();
-      renderChannels();
-    }
+    if (snap.exists()) { userData.status = snap.val(); updateStatusUI(); renderChannels(); }
   });
 }
 
 function enterForum() {
-  const initials = userData.name ? userData.name.charAt(0).toUpperCase() : "?";
-  document.getElementById("uavatar").textContent = initials;
-  document.getElementById("uname").textContent   = userData.name;
+  const initial = (userData.name || "?").charAt(0).toUpperCase();
+  const av = document.getElementById("uavatar");
+  av.textContent = initial;
+  av.classList.toggle("pending", userData.status === "pending");
+  document.getElementById("uname").textContent = userData.name;
   updateStatusUI();
+
+  /* Rendre les canaux même si le CSV n'est pas encore arrivé */
   renderChannels();
-  switchChannel("general");
   checkNotifStatus();
 }
 
 function updateStatusUI() {
-  document.getElementById("pending-bar").classList.toggle("show",
-    userData.status === "pending" && userProfile.role !== "admin");
+  document.getElementById("pending-bar").classList.toggle(
+    "show", userData.status === "pending" && (!userProfile || userProfile.role !== "admin")
+  );
 }
 
-/* ── CANAUX ───────────────────────────────────────────────────── */
-function getUserChannels() {
-  const channels = [{id:"general", icon:"💬", name:"Général", desc:"Ouvert à tous"}];
-
-  // Admin voit tous les canaux depuis le profil forum
+/* ================================================================
+   ARBORESCENCE DES CANAUX
+================================================================ */
+function renderChannels() {
+  const tree    = document.getElementById("channel-tree");
   const isAdmin = userProfile && userProfile.role === "admin";
+  const isActive = (userData && userData.status === "active") || isAdmin;
 
-  if (userData && userData.status === "active" || isAdmin) {
+  /* Disciplines & sous-groupes de l'utilisateur (normalisés) */
+  const userGroupNorms = isAdmin ? null
+    : (userData?.group    || "").split(", ").filter(Boolean).map(norm);
+  const userSubNorms   = isAdmin ? null
+    : (userData?.subgroup || "").split(", ").filter(Boolean).map(norm);
 
-    // Canaux disciplines
-    const groups = (userData.group || "").split(", ").filter(Boolean);
-    groups.forEach(c => {
-      channels.push({ id: norm(c), icon: catIcon(c), name: c, desc: "Canal " + c });
-    });
+  let html = "";
 
-    // Canaux créneaux (sous-groupes assignés par l'admin)
-    const subs = (userData.subgroup || "").split(", ").filter(Boolean);
-    subs.forEach(s => {
-      channels.push({ id: norm(s), icon: "📅", name: s, desc: "Créneau " + s });
-    });
+  /* ── 1. Canal GÉNÉRAL — toujours visible ── */
+  html += mkChannel({ id: "general", icon: "💬", name: "Général", desc: "Ouvert à tous" });
+
+  if (isActive) {
+
+    if (csvStructure.length > 0) {
+      html += `<div class="tree-sep"></div>`;
+
+      /* ── 2. Catégories & sous-catégories depuis le CSV ── */
+      for (const cat of csvStructure) {
+        const catNorm = norm(cat.category);
+        const userHasCat = isAdmin || (userGroupNorms && userGroupNorms.includes(catNorm));
+
+        /* Sous-catégories auxquelles l'utilisateur a accès */
+        const visibleSubs = isAdmin
+          ? cat.subs
+          : cat.subs.filter(s => userSubNorms && userSubNorms.includes(norm(s.name)));
+
+        /* Ne pas afficher la section si l'utilisateur n'a aucun accès */
+        if (!userHasCat && visibleSubs.length === 0) continue;
+
+        const catId      = "cat_" + catNorm;
+        const isCollapsed = collapsedCats[catId] === true;
+
+        html += `
+<div class="cat-section${isCollapsed ? " collapsed" : ""}" id="section-${catId}">
+  <div class="cat-hdr" onclick="toggleCat('${catId}')">
+    <span class="cat-hdr-icon">${catIcon(cat.category)}</span>
+    <span class="cat-hdr-name">${esc(cat.category)}</span>
+    <span class="cat-toggle">▾</span>
+  </div>
+  <div class="cat-subs" id="subs-${catId}" style="max-height:${isCollapsed ? "0" : "9999px"}">`;
+
+        /* Canal général de la discipline (si l'user a cette discipline) */
+        if (userHasCat) {
+          html += mkChannel({
+            id:   catNorm,
+            icon: catIcon(cat.category),
+            name: "Général " + cat.category,
+            desc: "Discussion générale — " + cat.category
+          }, false);
+        }
+
+        /* Sous-catégories */
+        for (const sub of visibleSubs) {
+          html += mkChannel({
+            id:   norm(sub.name),
+            icon: sub.icon || "📅",
+            name: sub.name,
+            desc: sub.desc || sub.name
+          }, true);
+        }
+
+        html += `</div></div>`;
+      }
+
+      /* ── 3. Sous-groupes Firebase non couverts par le CSV ── */
+      if (!isAdmin && userSubNorms) {
+        const csvSubNormSet = new Set(csvStructure.flatMap(c => c.subs.map(s => norm(s.name))));
+        const extraSubs = (userData?.subgroup || "").split(", ").filter(Boolean)
+          .filter(s => !csvSubNormSet.has(norm(s)));
+
+        if (extraSubs.length > 0) {
+          html += `<div class="tree-sep"></div>`;
+          html += `<div class="cat-hdr" style="cursor:default;pointer-events:none;opacity:.5">
+            <span class="cat-hdr-name">Mes créneaux</span>
+          </div>`;
+          for (const s of extraSubs) {
+            html += mkChannel({ id: norm(s), icon: "📅", name: s, desc: "Créneau " + s }, false);
+          }
+        }
+      }
+
+    } else if (!csvLoaded) {
+      /* CSV en cours de chargement */
+      html += `<div class="csv-loading"><div class="csv-spinner"></div><span>Chargement des canaux…</span></div>`;
+    } else {
+      /* CSV vide ou erreur → fallback Firebase */
+      html += `<div class="tree-sep"></div>`;
+      const groups = (userData?.group || "").split(", ").filter(Boolean);
+      groups.forEach(c => {
+        html += mkChannel({ id: norm(c), icon: catIcon(c), name: c, desc: "Canal " + c });
+      });
+      const subs = (userData?.subgroup || "").split(", ").filter(Boolean);
+      if (subs.length > 0) {
+        html += `<div class="tree-sep"></div>`;
+        subs.forEach(s => {
+          html += mkChannel({ id: norm(s), icon: "📅", name: s, desc: "Créneau " + s });
+        });
+      }
+    }
   }
 
-  return channels;
+  tree.innerHTML = html;
 }
 
-function renderChannels() {
-  const list = document.getElementById("channel-list");
-  const channels = getUserChannels();
-  list.innerHTML = channels.map(c => `
-    <div class="channel${c.id === currentChannel ? " active" : ""}" onclick="switchChannel('${esc(c.id)}')">
-      <span class="channel-icon">${c.icon}</span>
-      <span>${esc(c.name)}</span>
-    </div>`).join("");
+/* Génère le HTML d'un canal */
+function mkChannel(ch, isSub = false) {
+  const active = ch.id === currentChannel ? " active" : "";
+  const sub    = isSub ? " sub" : "";
+  return `<div class="channel${active}${sub}" onclick="onChannelClick('${esc(ch.id)}','${esc(ch.name)}','${esc(ch.icon)}','${esc(ch.desc)}')" title="${esc(ch.desc)}">
+  <span class="channel-icon">${ch.icon}</span>
+  <span class="channel-name">${esc(ch.name)}</span>
+</div>`;
 }
 
-function switchChannel(id) {
-  const ch = getUserChannels().find(c => c.id === id) || getUserChannels()[0];
-  currentChannel = ch.id;
-  renderChannels();
-  document.getElementById("ch-icon").textContent  = ch.icon;
-  document.getElementById("ch-title").textContent = ch.name;
-  document.getElementById("ch-desc").textContent  = ch.desc;
+/* Clic sur un canal */
+function onChannelClick(id, name, icon, desc) {
+  switchChannel(id, name, icon, desc);
+  goToChat(); /* mobile : slide vers chat */
+}
+
+/* Collapse/expand catégorie */
+function toggleCat(catId) {
+  collapsedCats[catId] = !collapsedCats[catId];
+  const section = document.getElementById("section-" + catId);
+  const subs    = document.getElementById("subs-"    + catId);
+  if (!section || !subs) return;
+  if (collapsedCats[catId]) {
+    section.classList.add("collapsed");
+    subs.style.maxHeight = "0";
+  } else {
+    section.classList.remove("collapsed");
+    subs.style.maxHeight = "9999px";
+  }
+}
+
+/* ── CHANGEMENT DE CANAL ──────────────────────────────────────────── */
+function switchChannel(id, name, icon, desc) {
+  currentChannel = id;
+
+  /* Résoudre nom/icône/desc si pas fournis */
+  if (!name) {
+    if (id === "general") { name = "Général"; icon = "💬"; desc = "Ouvert à tous"; }
+    else {
+      /* Chercher dans le CSV */
+      outer:
+      for (const cat of csvStructure) {
+        if (norm(cat.category) === id) {
+          name = "Général " + cat.category; icon = catIcon(cat.category);
+          desc = "Discussion générale — " + cat.category; break;
+        }
+        for (const sub of cat.subs) {
+          if (norm(sub.name) === id) { name = sub.name; icon = sub.icon || "📅"; desc = sub.desc || sub.name; break outer; }
+        }
+      }
+      /* Fallback Firebase */
+      if (!name) {
+        const groups = (userData?.group || "").split(", ").filter(Boolean);
+        const g = groups.find(x => norm(x) === id);
+        if (g) { name = g; icon = catIcon(g); desc = "Canal " + g; }
+        const subs = (userData?.subgroup || "").split(", ").filter(Boolean);
+        const s = subs.find(x => norm(x) === id);
+        if (s) { name = s; icon = "📅"; desc = "Créneau " + s; }
+        if (!name) { name = id; icon = "💬"; desc = ""; }
+      }
+    }
+  }
+
+  document.getElementById("ch-icon").textContent  = icon  || "💬";
+  document.getElementById("ch-title").textContent = name;
+  document.getElementById("ch-desc").textContent  = desc  || "";
   document.getElementById("messages").innerHTML   = "";
+
   if (currentListener) currentListener();
-  loadMessages(ch.id);
+  loadMessages(id);
+  renderChannels(); /* re-render pour activer le canal */
 }
 
-/* ── MESSAGES ─────────────────────────────────────────────────── */
+/* ── MESSAGES FIREBASE ────────────────────────────────────────────── */
 function loadMessages(id) {
   const ref = db.ref("fts_forum/messages/" + id).limitToLast(50);
   ref.on("child_added", snap => {
@@ -439,29 +1001,32 @@ function sendMessage() {
   const txt   = input.value.trim();
   if (!txt) return;
   db.ref("fts_forum/messages/" + currentChannel).push({
-    name: userData.name,
-    text: txt,
-    ts:   Date.now()
+    name: userData.name, text: txt, ts: Date.now()
   });
   notifyChannel(currentChannel, userData.name + " : " + txt.substring(0, 80));
-  input.value = "";
-  input.style.height = "";
+  input.value = ""; input.style.height = "";
 }
 
 function appendMsg(m, own, key) {
-  const wrap    = document.getElementById("messages");
-  const div     = document.createElement("div");
-  div.className = "msg " + (own ? "own" : "other");
-  const isMedia  = m.text && m.text.startsWith("[media]");
-  const mediaUrl = isMedia ? m.text.slice(7) : null;
+  const wrap = document.getElementById("messages");
+
+  /* Retirer l'état vide si présent */
+  const empty = wrap.querySelector(".empty-state");
+  if (empty) empty.remove();
+
+  const div       = document.createElement("div");
+  div.className   = "msg " + (own ? "own" : "other");
+  const isMedia   = m.text && m.text.startsWith("[media]");
+  const mediaUrl  = isMedia ? m.text.slice(7) : null;
+
   div.innerHTML = `
     <div class="msg-meta">
       ${!own ? `<span class="msg-author">${esc(m.name)}</span>` : ""}
-      <span>${new Date(m.ts).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span>
+      <span>${new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
     </div>
     ${isMedia
       ? `<div class="msg-bubble">${renderMedia(mediaUrl)}</div>`
-      : `<div class="msg-bubble">${esc(m.text).replace(/\n/g,"<br>")}</div>`}
+      : `<div class="msg-bubble">${esc(m.text).replace(/\n/g, "<br>")}</div>`}
     ${adminMode ? `<button class="btn-del-msg" onclick="deleteMsg('${key}')">🗑</button>` : ""}`;
   wrap.appendChild(div);
   scrollBottom();
@@ -472,106 +1037,89 @@ function deleteMsg(k) {
     db.ref("fts_forum/messages/" + currentChannel + "/" + k).remove();
 }
 
-/* ── ADMIN ────────────────────────────────────────────────────── */
+/* ── ADMIN ────────────────────────────────────────────────────────── */
 function toggleAdminMode() {
-  // Uniquement accessible si role === admin (bouton visible seulement pour les admins)
   if (!userProfile || userProfile.role !== "admin") return;
   adminMode = !adminMode;
   document.getElementById("admin-bar").classList.toggle("show", adminMode);
   document.getElementById("btn-gear").classList.toggle("active", adminMode);
-  switchChannel(currentChannel); // Refresh affichage boutons suppression
+  if (currentChannel) switchChannel(currentChannel);
 }
-
 function exitAdmin() {
   adminMode = false;
   document.getElementById("admin-bar").classList.remove("show");
   document.getElementById("btn-gear").classList.remove("active");
-  switchChannel(currentChannel);
+  if (currentChannel) switchChannel(currentChannel);
 }
 
-/* ── BADGE NON LUS ────────────────────────────────────────────── */
+/* ── DÉCONNEXION ──────────────────────────────────────────────────── */
+function doSignOut() {
+  firebase.auth().signOut().then(() => { window.location.href = "auth.html"; });
+}
+
+/* ── CLAVIER & TEXTAREA ──────────────────────────────────────────── */
+function handleKey(e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+function autoResize(el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }
+
+/* ── BADGE MESSAGES PRIVÉS ───────────────────────────────────────── */
 function listenUnreadBadge(uid) {
-  db.ref('fts_dm/userConvs/' + uid).on('value', async snap => {
+  db.ref("fts_dm/userConvs/" + uid).on("value", async snap => {
     const convIds = snap.val() ? Object.keys(snap.val()) : [];
     if (!convIds.length) { updateMsgBadge(0); return; }
     let total = 0;
     await Promise.all(convIds.map(id =>
-      db.ref('fts_dm/conversations/' + id + '/unread/' + uid).once('value')
+      db.ref("fts_dm/conversations/" + id + "/unread/" + uid).once("value")
         .then(s => { total += (s.val() || 0); })
     ));
     updateMsgBadge(total);
   });
 }
-function updateMsgBadge(count) {
-  const el = document.getElementById('msg-badge');
+function updateMsgBadge(n) {
+  const el = document.getElementById("msg-badge");
   if (!el) return;
-  if (count > 0) { el.textContent = count > 99 ? '99+' : count; el.style.display = 'inline-block'; }
-  else { el.style.display = 'none'; }
+  if (n > 0) { el.textContent = n > 99 ? "99+" : n; el.style.display = "inline-block"; }
+  else el.style.display = "none";
 }
 
-/* ── DÉCONNEXION ─────────────────────────────────────────────── */
-function doSignOut() {
-  firebase.auth().signOut().then(() => {
-    window.location.href = "auth.html";
-  });
-}
-
-/* ── CLAVIER & RESIZE TEXTAREA ────────────────────────────────── */
-function handleKey(e) {
-  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-}
-function autoResize(el) {
-  el.style.height = "auto";
-  el.style.height = el.scrollHeight + "px";
-}
-
-/* ── UPLOAD MÉDIA ─────────────────────────────────────────────── */
+/* ── UPLOAD MÉDIA (Cloudinary) ───────────────────────────────────── */
 function uploadMedia(file) {
   if (!file) return;
   if (file.size > 100 * 1024 * 1024) { alert("Fichier trop volumineux (max 100 Mo)"); return; }
   const bar  = document.getElementById("upload-bar");
   const fill = document.getElementById("upload-fill");
   const txt  = document.getElementById("upload-txt");
-  bar.classList.add("show");
-  fill.style.width   = "0%";
-  fill.style.background = "var(--red)";
-  txt.textContent    = "Upload en cours…";
+  bar.classList.add("show"); fill.style.width = "0%"; fill.style.background = "var(--red)";
+  txt.textContent = "Upload en cours…";
   const fd = new FormData();
-  const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_");
   fd.append("file", file);
   fd.append("upload_preset", UPLOAD_PRESET);
-  fd.append("public_id", "forum/" + cleanName);
+  fd.append("public_id", "forum/" + file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_"));
   fd.append("resource_type", "auto");
   const xhr = new XMLHttpRequest();
   xhr.open("POST", "https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/auto/upload");
-  xhr.upload.onprogress = function(e) {
+  xhr.upload.onprogress = e => {
     if (e.lengthComputable) {
       const pct = Math.round(e.loaded / e.total * 100);
-      fill.style.width  = pct + "%";
-      txt.textContent   = "Upload " + pct + "%…";
+      fill.style.width = pct + "%"; txt.textContent = "Upload " + pct + "%…";
     }
   };
-  xhr.onload = function() {
+  xhr.onload = () => {
     if (xhr.status === 200) {
       const res = JSON.parse(xhr.responseText);
-      fill.style.background = "#22c55e";
-      txt.textContent = "✓ " + file.name;
+      fill.style.background = "#22c55e"; txt.textContent = "✓ " + file.name;
       setTimeout(() => bar.classList.remove("show"), 2000);
       document.getElementById("file-input").value = "";
-      if (db && userData) {
-        db.ref("fts_forum/messages/" + currentChannel).push({
-          name: userData.name, text: "[media]" + res.secure_url, ts: Date.now()
-        });
-      }
+      db.ref("fts_forum/messages/" + currentChannel).push({
+        name: userData.name, text: "[media]" + res.secure_url, ts: Date.now()
+      });
     } else {
       txt.textContent = "Erreur upload";
       setTimeout(() => bar.classList.remove("show"), 3000);
     }
   };
-  xhr.onerror = function() {
-    txt.textContent = "Erreur réseau";
-    setTimeout(() => bar.classList.remove("show"), 3000);
-  };
+  xhr.onerror = () => { txt.textContent = "Erreur réseau"; setTimeout(() => bar.classList.remove("show"), 3000); };
   xhr.send(fd);
 }
 
@@ -579,40 +1127,36 @@ function renderMedia(url) {
   const isCloudImg   = url.includes("/image/upload/");
   const isCloudVideo = url.includes("/video/upload/");
   const ext = url.split("?")[0].split(".").pop().toLowerCase();
-  const isImg    = isCloudImg  || ["jpg","jpeg","png","gif","webp"].includes(ext);
-  const isVideo  = (isCloudVideo && !["mp3","wav","ogg","aac","m4a"].includes(ext)) || ["mp4","mov","webm"].includes(ext);
-  const isAudio  = ["mp3","wav","ogg","aac","m4a"].includes(ext) || (isCloudVideo && ["mp3","wav","ogg","aac","m4a"].includes(ext));
-  const isPdf    = ext === "pdf";
+  const isImg   = isCloudImg  || ["jpg","jpeg","png","gif","webp"].includes(ext);
+  const isVideo = (isCloudVideo && !["mp3","wav","ogg","aac","m4a"].includes(ext)) || ["mp4","mov","webm"].includes(ext);
+  const isAudio = ["mp3","wav","ogg","aac","m4a"].includes(ext);
+  const isPdf   = ext === "pdf";
   if (isImg)   return `<img class="msg-img" src="${url}" onclick="window.open('${url}')">`;
   if (isVideo) return `<video class="msg-video" src="${url}" controls playsinline></video>`;
   if (isAudio) {
     const fname = decodeURIComponent(url.split("/").pop().split("?")[0]);
     return `<div style="margin-top:.4rem">
-      <div style="font-size:.72rem;color:var(--gold);margin-bottom:.3rem">🎵 ${fname}</div>
-      <audio controls preload="none" style="width:100%;min-width:200px;display:block"><source src="${url}" type="audio/mpeg"></audio>
-      <a href="${url}" target="_blank" style="font-size:.65rem;color:var(--muted);text-decoration:none;display:block;margin-top:.2rem">Écouter / Télécharger</a>
+      <div style="font-size:.72rem;color:var(--gold);margin-bottom:.3rem">🎵 ${esc(fname)}</div>
+      <audio controls preload="none" style="width:100%;min-width:200px"><source src="${url}"></audio>
     </div>`;
   }
   if (isPdf) return `<a class="msg-pdf" href="${url}" target="_blank">📄 Ouvrir le PDF</a>`;
   return `<a class="msg-pdf" href="${url}" target="_blank">📎 Fichier joint</a>`;
 }
 
-/* ── NOTIFICATIONS PUSH ───────────────────────────────────────── */
+/* ── NOTIFICATIONS PUSH ───────────────────────────────────────────── */
 function urlBase64ToUint8Array(b64) {
-  const pad  = "=".repeat((4 - b64.length % 4) % 4);
+  const pad = "=".repeat((4 - b64.length % 4) % 4);
   const base64 = (b64 + pad).replace(/-/g, "+").replace(/_/g, "/");
-  const raw  = window.atob(base64);
-  const arr  = new Uint8Array(raw.length);
+  const raw = atob(base64); const arr = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
   return arr;
 }
-
 async function getSubscription() {
   if (!("serviceWorker" in navigator)) return null;
   const reg = await navigator.serviceWorker.ready;
   return reg.pushManager.getSubscription();
 }
-
 async function checkNotifStatus() {
   const sub = await getSubscription();
   updateNotifBtn(!!sub);
@@ -620,7 +1164,7 @@ async function checkNotifStatus() {
   if (Notification.permission === "denied") {
     banner.classList.remove("hidden");
     banner.querySelector(".notif-banner-title").textContent = "Notifications bloquées";
-    banner.querySelector(".notif-banner-sub").textContent   = "Clique sur le 🔒 dans la barre d'adresse → Autoriser";
+    banner.querySelector(".notif-banner-sub").textContent   = "Clique sur 🔒 dans la barre d'adresse → Autoriser";
     banner.querySelector(".notif-banner-btn").style.display = "none";
     banner.querySelector(".notif-banner-icon").textContent  = "⚠️";
   } else if (!sub && !storageGet("fts_notif_dismissed")) {
@@ -629,78 +1173,50 @@ async function checkNotifStatus() {
     banner.classList.add("hidden");
   }
 }
-
 async function activerNotifs() {
   document.getElementById("notif-banner").classList.add("hidden");
   await subscribePush();
 }
-
 function fermerBanniere() {
   document.getElementById("notif-banner").classList.add("hidden");
   storageSet("fts_notif_dismissed", "1");
 }
-
 function updateNotifBtn(on) {
   const btn = document.getElementById("btn-notif");
   if (!btn) return;
   btn.textContent = on ? "🔔 Notifs activées" : "🔕 Activer les notifs";
   btn.classList.toggle("on", on);
 }
-
 async function toggleNotifications() {
   const sub = await getSubscription();
   if (sub) {
     await sub.unsubscribe();
-    fetch(WORKER_URL + "/unsubscribe", {
-      method: "POST", headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({uid})
-    }).catch(() => {});
+    fetch(WORKER_URL + "/unsubscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ uid }) }).catch(() => {});
     updateNotifBtn(false);
-  } else {
-    await subscribePush();
-  }
+  } else { await subscribePush(); }
 }
-
 async function subscribePush() {
   try {
     const perm = await Notification.requestPermission();
     if (perm !== "granted") { alert("Autorise les notifications pour continuer."); return; }
     const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-    });
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
     await fetch(WORKER_URL + "/subscribe", {
-      method: "POST", headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({
-        uid,
-        subscription: sub.toJSON(),
-        group:    userData ? userData.group    : "",
-        subgroup: userData ? userData.subgroup : ""
-      })
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uid, subscription: sub.toJSON(), group: userData?.group || "", subgroup: userData?.subgroup || "" })
     });
     updateNotifBtn(true);
-  } catch(e) {
-    console.error("Push :", e);
-    alert("Erreur notifications : " + e.message);
-  }
+  } catch (e) { console.error("Push :", e); alert("Erreur notifications : " + e.message); }
 }
-
 function notifyChannel(channel, body) {
-  const ch = getUserChannels().find(c => c.id === channel) || {name:"Forum"};
   let group = "", subgroup = "";
   if (userData) {
     (userData.group    || "").split(", ").forEach(g => { if (norm(g) === channel) group    = g; });
     (userData.subgroup || "").split(", ").forEach(s => { if (norm(s) === channel) subgroup = s; });
   }
   fetch(WORKER_URL + "/notify", {
-    method: "POST", headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      group, subgroup,
-      title: "FTS — " + ch.name, body,
-      url:   "/forum.html",
-      senderUid: uid
-    })
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ group, subgroup, title: "FTS — Forum", body, url: "/forum.html", senderUid: uid })
   }).catch(() => {});
 }
 </script>
