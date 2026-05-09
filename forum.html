@@ -655,43 +655,45 @@ function parseCSVLine(line) {
 
 async function loadCSV() {
   try {
-    /* Cache-bust pour forcer la mise à jour depuis le tableur */
-    const resp = await fetch(CSV_URL + "&_t=" + Date.now());
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const text = await resp.text();
+  /* Cache-bust pour forcer la mise à jour depuis le tableur */
+  const resp = await fetch(CSV_URL + "&_t=" + Date.now());
+  if (!resp.ok) throw new Error("HTTP " + resp.status);
+  const text = await resp.text();
 
-    const lines = text.trim().split(/\r?\n/);
-    /* Ligne 0 = en-têtes → on commence à 1 */
-    const map = new Map(); // préserve l'ordre d'insertion
+  const lines = text.trim().split(/\r?\n/);
+  /* Ligne 0 = en-têtes → on commence à 1 */
+  const map = new Map(); // préserve l'ordre d'insertion
 
-    for (let i = 1; i < lines.length; i++) {
-      const cols = parseCSVLine(lines[i]);
-      const cat  = (cols[0] || "").trim();
-      const sub  = (cols[1] || "").trim();
- /*     const ico  = (cols[2] || "").trim(); */
-  /*    const desc = (cols[3] || "").trim(); */
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
 
-      if (!cat) continue;
+    // On récupère uniquement les colonnes A et B
+    const cat = (cols[0] || "").trim();
+    const sub = (cols[1] || "").trim();
 
-      if (!map.has(cat)) map.set(cat, { category: cat, subs: [] });
+    if (!cat) continue;
 
-      if (sub) {
-        map.get(cat).subs.push({
-          name: sub,
-          icon: ico  || "📅",
-          desc: desc || sub
-        });
-      }
+    if (!map.has(cat)) {
+      map.set(cat, {
+        category: cat,
+        subs: []
+      });
     }
 
-    csvStructure = Array.from(map.values());
-    csvLoaded = true;
-    console.log("[FTS] CSV chargé :", csvStructure.length, "catégories");
+    if (sub) {
+      map.get(cat).subs.push({
+        name: sub
+      });
+    }
+  }
 
-    /* Si l'utilisateur est déjà connecté, on re-render les canaux */
-    if (userData) renderChannels();
+  csvStructure = Array.from(map.values());
+  csvLoaded = true;
+  console.log("[FTS] CSV chargé :", csvStructure.length, "catégories");
 
-  } catch (e) {
+  /* Si l'utilisateur est déjà connecté, on re-render les canaux */
+  if (userData) renderChannels();
+} catch (e) {
     console.warn("[FTS] Erreur CSV :", e.message);
     csvLoaded = true;       // permet de continuer sans CSV
     csvStructure = [];
