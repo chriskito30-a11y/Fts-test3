@@ -25,6 +25,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // On ne cache que les requêtes GET (POST/PUT/etc. ne sont pas cachables)
+  if(e.request.method !== 'GET') return;
   e.respondWith(
     fetch(e.request)
       .then(res => {
