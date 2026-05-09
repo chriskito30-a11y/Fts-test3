@@ -5,38 +5,52 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Forum — Fais Ton Show</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK — Auth ajouté -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
 <script>
 function setH(){document.documentElement.style.setProperty("--app-h",window.innerHeight+"px");}
 setH();window.addEventListener("resize",setH);
 window.addEventListener("orientationchange",function(){setTimeout(setH,200);});
 </script>
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--black:#0a0a0a;--white:#f5f2ee;--red:#d4201a;--gold:#c9a84c;--grey:#1c1c1c;--grey2:#161616;--muted:#888;--border:#2a2a2a;--pending:#c9a84c}
 html,body{height:100%;background:var(--black);color:var(--white);font-family:"DM Sans",sans-serif;overflow:hidden}
 .app{display:flex;height:100vh;height:calc(var(--app-h,100vh))}
+
+/* ── AUTH LOADING ── */
+.auth-loading{position:fixed;inset:0;background:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:9999}
+.auth-loading-logo{font-family:"Bebas Neue",sans-serif;font-size:2rem;color:var(--white)}
+.auth-loading-logo span{color:var(--red)}
+.auth-loading-sub{font-size:.65rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.spinner{width:24px;height:24px;border:2px solid #333;border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* Sidebar */
 .sidebar{width:220px;background:var(--grey2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
 .sidebar-hdr{padding:1.2rem 1rem .8rem;border-bottom:1px solid var(--border)}
 .sidebar-logo{font-family:"Bebas Neue",sans-serif;font-size:1.3rem;color:var(--red)}
 .sidebar-sub{font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:.1rem}
-.sidebar-user{display:flex;align-items:center;gap:.5rem;padding:.7rem 1rem;border-bottom:1px solid var(--border);cursor:pointer}
-.sidebar-user:hover .uname{color:var(--white)}
+.sidebar-user{display:flex;align-items:center;gap:.5rem;padding:.7rem 1rem;border-bottom:1px solid var(--border)}
 .uavatar{width:26px;height:26px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:600;color:var(--white);flex-shrink:0;text-transform:uppercase}
-.uavatar.pending{background:var(--gold)}
-.uname{font-size:.78rem;color:var(--muted);flex:1;transition:color .2s}
-.uedit{font-size:.6rem;color:#333}
+.uname{font-size:.78rem;color:var(--muted);flex:1}
 .channels-lbl{font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;color:#444;padding:.8rem 1rem .4rem}
 .channel-list{flex:1;overflow-y:auto;padding:.2rem 0}
 .channel{display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;cursor:pointer;transition:background .15s;border-left:2px solid transparent;font-size:.82rem;color:var(--muted)}
 .channel:hover{background:rgba(255,255,255,.03);color:var(--white)}
 .channel.active{background:rgba(212,32,26,.08);border-left-color:var(--red);color:var(--white)}
 .channel-icon{font-size:1rem;flex-shrink:0}
-.sidebar-footer{padding:.8rem 1rem;border-top:1px solid var(--border)}
+.sidebar-footer{padding:.8rem 1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.5rem}
 .back-link{font-size:.68rem;color:#444;text-decoration:none;display:flex;align-items:center;gap:.35rem;transition:color .2s}
 .back-link:hover{color:var(--muted)}
+.btn-signout-forum{background:transparent;border:1px solid #222;color:#444;padding:.35rem .7rem;border-radius:2px;cursor:pointer;font-size:.65rem;font-family:"DM Sans",sans-serif;transition:all .2s;text-align:left}
+.btn-signout-forum:hover{border-color:var(--red);color:var(--red)}
+
 /* Main */
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
 .pending-bar{background:#1a1500;border-bottom:1px solid rgba(201,168,76,.3);padding:.55rem 1.4rem;font-size:.72rem;color:var(--gold);display:none;align-items:center;gap:.5rem;flex-shrink:0}
@@ -45,13 +59,15 @@ html,body{height:100%;background:var(--black);color:var(--white);font-family:"DM
 .chat-icon{font-size:1.3rem}
 .chat-title{font-family:"Bebas Neue",sans-serif;font-size:1.3rem;letter-spacing:.04em}
 .chat-desc{font-size:.7rem;color:var(--muted);margin-top:.05rem}
-.btn-admin-gear{background:transparent;border:none;cursor:pointer;font-size:1.1rem;padding:.2rem .4rem;opacity:.3;transition:opacity .2s;margin-left:.4rem}
+.btn-admin-gear{background:transparent;border:none;cursor:pointer;font-size:1.1rem;padding:.2rem .4rem;opacity:.3;transition:opacity .2s;margin-left:.4rem;display:none}
 .btn-admin-gear:hover{opacity:1}
 .btn-admin-gear.active{opacity:1;filter:drop-shadow(0 0 4px var(--red))}
+.btn-admin-gear.visible{display:inline-flex}
 .admin-bar{background:#1a0a0a;border-bottom:1px solid #3a1a1a;padding:.4rem 1.4rem;font-size:.68rem;color:#aa5a5a;display:none;align-items:center;justify-content:space-between;flex-shrink:0}
 .admin-bar.show{display:flex}
 .btn-exit-admin{background:transparent;border:1px solid #3a1a1a;color:#aa5a5a;padding:.2rem .6rem;border-radius:2px;cursor:pointer;font-size:.65rem}
 .btn-exit-admin:hover{border-color:var(--red);color:var(--white)}
+
 /* Messages */
 .messages{flex:1;overflow-y:auto;padding:1rem 1.4rem;display:flex;flex-direction:column;gap:.5rem;scroll-behavior:smooth}
 .messages::-webkit-scrollbar{width:4px}
@@ -73,6 +89,7 @@ html,body{height:100%;background:var(--black);color:var(--white);font-family:"DM
 .btn-del-msg:hover{color:var(--red)}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#333;text-align:center;gap:.5rem}
 .empty-icon{font-size:2.5rem;opacity:.3}
+
 /* Input */
 .input-area{padding:.9rem 1.4rem;padding-bottom:calc(.9rem + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--grey2);flex-shrink:0}
 .input-row{display:flex;gap:.6rem;align-items:flex-end}
@@ -92,41 +109,12 @@ html,body{height:100%;background:var(--black);color:var(--white);font-family:"DM
 .msg-video{max-width:100%;max-height:260px;border-radius:3px;margin-top:.3rem;display:block}
 .msg-pdf{display:inline-flex;align-items:center;gap:.5rem;margin-top:.3rem;padding:.4rem .8rem;background:#141414;border:1px solid var(--border);border-radius:3px;font-size:.75rem;color:var(--gold);text-decoration:none}
 .msg-pdf:hover{border-color:var(--gold)}
-
-/* MODIFICATION : STYLE DES PILLS (Nouveau) */
 .pill-container{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.2rem}
 .pill{background:#141414;border:1px solid var(--border);padding:.4rem .7rem;border-radius:3px;font-size:.75rem;cursor:pointer;transition:all .15s;color:var(--muted);user-select:none}
 .pill:hover{border-color:#444;color:var(--white)}
 .pill.active{background:var(--red);border-color:var(--red);color:white;font-weight:500}
 
-/* Modals */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-.modal-overlay.hidden{display:none}
-.modal{background:var(--grey);border:1px solid var(--border);border-radius:4px;padding:2rem;width:95%;max-width:450px;animation:modalIn .25s ease;max-height:90vh;overflow-y:auto}
-@keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
-.modal-icon{font-size:2rem;text-align:center;margin-bottom:.5rem}
-.modal-title{font-family:"Bebas Neue",sans-serif;font-size:1.8rem;text-align:center;margin-bottom:.3rem}
-.modal-desc{font-size:.78rem;color:var(--muted);text-align:center;line-height:1.5;margin-bottom:1.2rem}
-.modal-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem;display:block}
-.modal-input{width:100%;background:#0e0e0e;border:1px solid var(--border);border-radius:3px;color:var(--white);font-family:"DM Sans",sans-serif;font-size:.85rem;padding:.65rem .9rem;outline:none;transition:border-color .2s;margin-bottom:.8rem}
-.modal-btn{width:100%;margin-top:.8rem;padding:.8rem;background:var(--red);border:none;color:var(--white);font-family:"Bebas Neue",sans-serif;font-size:1.1rem;letter-spacing:.08em;border-radius:3px;cursor:pointer;transition:background .2s}
-.modal-btn:hover{background:#b71815}
-.modal-btn.secondary{background:transparent;border:1px solid #333;color:var(--muted);font-family:"DM Sans",sans-serif;font-size:.8rem;letter-spacing:0;margin-top:.4rem}
-.modal-err{font-size:.72rem;color:var(--red);text-align:center;min-height:1rem;margin-bottom:.3rem}
-.modal-row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
-
-@media(max-width:640px){
-  .sidebar{width:100%;height:auto;border-right:none;border-bottom:1px solid var(--border);flex-shrink:0}
-  .sidebar-hdr,.sidebar-user,.channels-lbl,.sidebar-footer{display:none}
-  .channel-list{display:flex;flex-direction:row;padding:.4rem .5rem;gap:.3rem;overflow-x:auto;width:100%}
-  .channel{padding:.4rem .75rem;border-left:none;border-bottom:2px solid transparent;border-radius:3px;white-space:nowrap;font-size:.75rem}
-  .channel.active{border-bottom-color:var(--red);background:rgba(212,32,26,.08)}
-  .app{flex-direction:column}
-  .main{flex:1;min-height:0}
-  .messages{padding:.8rem}
-  .msg{max-width:88%}
-  .input-area{padding:.7rem .8rem;padding-bottom:calc(.7rem + env(safe-area-inset-bottom))}
-}
+/* Notifications */
 .btn-notif{background:transparent;border:1px solid var(--border);color:var(--muted);padding:.35rem .8rem;border-radius:20px;cursor:pointer;font-size:.68rem;transition:all .2s;width:100%;text-align:left}
 .btn-notif:hover{border-color:var(--gold);color:var(--gold)}
 .btn-notif.on{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.1)}
@@ -140,70 +128,54 @@ html,body{height:100%;background:var(--black);color:var(--white);font-family:"DM
 .notif-banner-btn{background:var(--red);border:none;color:var(--white);padding:.45rem 1rem;border-radius:20px;font-size:.75rem;font-weight:500;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .notif-banner-close{background:transparent;border:none;color:#555;font-size:1rem;cursor:pointer;padding:.2rem;flex-shrink:0;line-height:1}
 .notif-banner-close:hover{color:var(--muted)}
+
+@media(max-width:640px){
+  .sidebar{width:100%;height:auto;border-right:none;border-bottom:1px solid var(--border);flex-shrink:0}
+  .sidebar-hdr,.sidebar-user,.channels-lbl,.sidebar-footer{display:none}
+  .channel-list{display:flex;flex-direction:row;padding:.4rem .5rem;gap:.3rem;overflow-x:auto;width:100%}
+  .channel{padding:.4rem .75rem;border-left:none;border-bottom:2px solid transparent;border-radius:3px;white-space:nowrap;font-size:.75rem}
+  .channel.active{border-bottom-color:var(--red);background:rgba(212,32,26,.08)}
+  .app{flex-direction:column}
+  .main{flex:1;min-height:0}
+  .messages{padding:.8rem}
+  .msg{max-width:88%}
+  .input-area{padding:.7rem .8rem;padding-bottom:calc(.7rem + env(safe-area-inset-bottom))}
+}
 </style>
 </head>
 <body>
 
-<div class="modal-overlay hidden" id="reg-modal">
-  <div class="modal">
-    <div class="modal-icon">🎭</div>
-    <div class="modal-title">Inscription</div>
-    <div class="modal-row">
-      <div>
-        <label class="modal-label">Prénom</label>
-        <input class="modal-input" id="reg-first" type="text" placeholder="Prénom…" maxlength="24">
-      </div>
-      <div>
-        <label class="modal-label">Nom</label>
-        <input class="modal-input" id="reg-last" type="text" placeholder="Nom…" maxlength="24">
-      </div>
-    </div>
-    
-    <label class="modal-label">Discipline(s)</label>
-    <div class="pill-container" id="reg-cat-pills"></div>
-    
-    <label class="modal-label">Créneau(x)</label>
-    <div class="pill-container" id="reg-sub-pills"></div>
-    
-    <div class="modal-err" id="reg-err"></div>
-    <button class="modal-btn" onclick="submitRegistration()">Rejoindre le forum →</button>
-  </div>
+<!-- ── ÉCRAN DE CHARGEMENT AUTH ── -->
+<div class="auth-loading" id="auth-loading">
+  <div class="auth-loading-logo">FAIS TON <span>SHOW</span></div>
+  <div class="spinner"></div>
+  <div class="auth-loading-sub">Chargement du forum…</div>
 </div>
 
-<div class="modal-overlay hidden" id="admin-modal">
-  <div class="modal">
-    <div class="modal-icon">⚙️</div>
-    <div class="modal-title">Administration</div>
-    <input class="modal-input" id="admin-pwd-input" type="password" placeholder="Mot de passe…" style="margin-top:1rem">
-    <div class="modal-err" id="admin-err"></div>
-    <button class="modal-btn" onclick="checkAdminPwd()">Accéder →</button>
-    <button class="modal-btn secondary" onclick="closeAdminModal()">Annuler</button>
-  </div>
-</div>
-
-<div class="app">
+<!-- ── APPLICATION (cachée jusqu'à auth OK) ── -->
+<div class="app" id="app" style="display:none">
   <div class="sidebar">
     <div class="sidebar-hdr">
       <div class="sidebar-logo">FAIS TON SHOW</div>
       <div class="sidebar-sub">Forum</div>
     </div>
-    <div class="sidebar-user" onclick="editRegistration()">
+    <div class="sidebar-user">
       <div class="uavatar" id="uavatar">?</div>
       <div class="uname" id="uname">…</div>
-      <div class="uedit">✏️</div>
     </div>
     <div class="channels-lbl">Canaux</div>
     <div class="channel-list" id="channel-list"></div>
-    <div class="sidebar-footer" style="display:flex;flex-direction:column;gap:.5rem">
+    <div class="sidebar-footer">
       <button class="btn-notif" id="btn-notif" onclick="toggleNotifications()">🔕 Activer les notifs</button>
       <a class="back-link" href="membres.html">← Espace membres</a>
+      <button class="btn-signout-forum" onclick="doSignOut()">Déconnexion</button>
     </div>
   </div>
 
   <div class="main">
-    <div class="pending-bar" id="pending-bar">⏳ Inscription en attente de validation</div>
+    <div class="pending-bar" id="pending-bar">⏳ Accès en attente de validation</div>
     <div class="admin-bar" id="admin-bar">
-      ⚠️ Mode administration
+      ⚠️ Mode administration actif
       <button class="btn-exit-admin" onclick="exitAdmin()">Quitter</button>
     </div>
     <div class="chat-hdr">
@@ -213,7 +185,8 @@ html,body{height:100%;background:var(--black);color:var(--white);font-family:"DM
         <div class="chat-desc" id="ch-desc">Discussion ouverte à tous</div>
       </div>
       <div style="margin-left:auto;display:flex;align-items:center;gap:.3rem">
-        <button class="btn-admin-gear" id="btn-gear" onclick="openAdminModal()">⚙️</button>
+        <!-- Visible uniquement pour les admins -->
+        <button class="btn-admin-gear" id="btn-gear" onclick="toggleAdminMode()">⚙️</button>
       </div>
     </div>
     <div class="notif-banner hidden" id="notif-banner">
@@ -245,410 +218,451 @@ html,body{height:100%;background:var(--black);color:var(--white);font-family:"DM
 </div>
 
 <script>
+/* ================================================================
+   FORUM.JS — Chat temps réel Firebase
+   ✅ Auth via Firebase Auth (remplace localStorage UID)
+   ✅ Admin détecté via role RTDB (remplace mot de passe en clair)
+   ✅ Canaux filtrés selon disciplines du profil
+   ================================================================ */
+
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBlN-h7D-QWyGmZ4B59AVJkDIQ5molioq0",
-  authDomain: "faistonshow30.firebaseapp.com",
-  databaseURL: "https://faistonshow30-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "faistonshow30",
-  storageBucket: "faistonshow30.firebasestorage.app",
+  apiKey:            "AIzaSyBlN-h7D-QWyGmZ4B59AVJkDIQ5molioq0",
+  authDomain:        "faistonshow30.firebaseapp.com",
+  databaseURL:       "https://faistonshow30-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "faistonshow30",
+  storageBucket:     "faistonshow30.firebasestorage.app",
   messagingSenderId: "115713812172",
-  appId: "1:115713812172:web:db8db53a9a9ad819f00469"
+  appId:             "1:115713812172:web:db8db53a9a9ad819f00469"
 };
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6zQRcJLBGzmnrMQcFnnfiUwNTUbFTmL3Cg3Wv9HP6p9DXIVHlNdLd07a-QETaHX5NQ4mUr78lx_ox/pub?gid=199619478&single=true&output=csv";
-const ADMIN_PWD = "admin2026";
-const CLOUD_NAME = "dsylvtwqr";
+
+const CLOUD_NAME   = "dsylvtwqr";
 const UPLOAD_PRESET = "FaisTonShow";
-const WORKER_URL = "https://fts-push.gros-christophe.workers.dev";
+const WORKER_URL   = "https://fts-push.gros-christophe.workers.dev";
 const VAPID_PUBLIC_KEY = "BNenngaKqOtgqvFSo2KJipS0AwVChpzacAX5YSNZmizWLeji07auoKRZBMbOxRljvqz89QigB6esPcHfEDS_nik";
 
-let db, firebaseOk = false;
-let uid, userData;
-let currentChannel = "general";
+let db;
+let uid, userData, userProfile;
+let currentChannel  = "general";
 let currentListener = null;
-let adminMode = false;
-let allGroups = []; 
+let adminMode       = false;
 
-function norm(s){ return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); }
+/* ── UTILITAIRES ──────────────────────────────────────────────── */
+function norm(s){ return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); }
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-function catIcon(s){ const c=norm(s); if(c.includes("theat"))return"🎭"; if(c.includes("dans"))return"💃"; if(c.includes("musi")||c.includes("chant"))return"🎸"; return"💬"; }
-function storageSet(k,v){localStorage.setItem(k,v);}
-function storageGet(k){return localStorage.getItem(k);}
-function genUID(){return"u"+Math.random().toString(36).substr(2,9);}
-function scrollBottom(){const w=document.getElementById("messages");w.scrollTop=w.scrollHeight;}
+function catIcon(s){ const c=norm(s); if(c.includes("theat"))return"🎭"; if(c.includes("dans"))return"💃"; if(c.includes("chant"))return"🎤"; if(c.includes("musi"))return"🎸"; if(c.includes("singer"))return"⭐"; if(c.includes("comedie"))return"🎬"; if(c.includes("atelier"))return"🎨"; return"💬"; }
+function scrollBottom(){ const w=document.getElementById("messages"); w.scrollTop=w.scrollHeight; }
+function storageGet(k){ return localStorage.getItem(k); }
+function storageSet(k,v){ localStorage.setItem(k,v); }
 
-document.addEventListener("DOMContentLoaded",async function(){
-  // ── Enregistrement du Service Worker (requis pour les notifications push)
-  if("serviceWorker" in navigator){
-    try{
-      await navigator.serviceWorker.register("./sw.js",{scope:"./"});
-      console.log("[FTS] Service Worker enregistré");
-    }catch(e){
-      console.warn("[FTS] Échec enregistrement SW :",e);
-    }
+/* ── INITIALISATION ───────────────────────────────────────────── */
+document.addEventListener("DOMContentLoaded", async function() {
+
+  // Service Worker pour les notifications push
+  if ("serviceWorker" in navigator) {
+    try { await navigator.serviceWorker.register("./sw.js", {scope:"./"}); }
+    catch(e) { console.warn("[FTS] SW :", e); }
   }
 
-  try{ firebase.initializeApp(FIREBASE_CONFIG); db=firebase.database(); firebaseOk=true; }catch(e){}
-  await loadGroups();
-  uid=storageGet("fts_forum_uid");
-  if(uid && firebaseOk){ await loadUserData(); }else{ showRegModal(); }
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+  } catch(e) {
+    console.warn("[FTS] Firebase init :", e);
+  }
+
+  // Écoute de l'état d'authentification
+  firebase.auth().onAuthStateChanged(async user => {
+
+    if (!user) {
+      window.location.href = "auth.html";
+      return;
+    }
+
+    uid = user.uid;
+
+    try {
+      // 1. Charger le profil principal (fts_users)
+      const snap = await db.ref("fts_users/" + uid).once("value");
+      userProfile = snap.val();
+
+      if (!userProfile || userProfile.status === "pending") {
+        await firebase.auth().signOut();
+        window.location.href = "auth.html";
+        return;
+      }
+
+      // 2. Admin détecté via le rôle — plus de mot de passe
+      if (userProfile.role === "admin") {
+        adminMode = true;
+        document.getElementById("btn-gear").classList.add("visible", "active");
+        document.getElementById("admin-bar").classList.add("show");
+      }
+
+      // 3. Charger ou créer le profil forum (fts_forum/users)
+      await loadUserData();
+
+      // 4. Afficher l'app
+      document.getElementById("auth-loading").style.display = "none";
+      document.getElementById("app").style.display          = "flex";
+
+    } catch(e) {
+      console.warn("[FTS] Erreur chargement profil :", e);
+      window.location.href = "auth.html";
+    }
+  });
 });
 
-async function loadGroups(){
-  try{
-    const r=await fetch(SHEET_URL);
-    const text=await r.text();
-    const rows=parseCSV(text);
-    allGroups=[];
-    rows.forEach(row => {
-      const cat=(row[0]||"").trim(), sub=(row[1]||"").trim();
-      if(cat){ allGroups.push({cat,sub}); }
-    });
-    buildCatPills();
-  }catch(e){ console.error(e); }
-}
+/* ── PROFIL FORUM ─────────────────────────────────────────────── */
+async function loadUserData() {
+  const snap = await db.ref("fts_forum/users/" + uid).once("value");
 
-function parseCSV(t){
-  var r=[],ls=t.trim().split("\n");
-  for(var li=1;li<ls.length;li++){
-    var row=ls[li],c=[],s="",q=false;
-    for(var i=0;i<row.length;i++){
-      if(row[i]==='"'){q=!q;}else if(row[i]===","&&!q){c.push(s.trim());s="";}else{s+=row[i];}
-    }
-    c.push(s.trim()); r.push(c);
+  if (snap.exists()) {
+    userData = snap.val();
+  } else {
+    // Création automatique depuis le profil principal (migration / premier accès)
+    userData = {
+      name:     userProfile.name || userProfile.email,
+      group:    (userProfile.disciplines || []).join(", "),
+      subgroup: "",
+      status:   userProfile.status || "active",
+      ts:       Date.now(),
+    };
+    await db.ref("fts_forum/users/" + uid).set(userData);
   }
-  return r;
-}
 
-// MODIFICATION : Utilisation des Pills
-function buildCatPills(){
-  const cats=[...new Set(allGroups.map(g => g.cat))];
-  const cont=document.getElementById("reg-cat-pills");
-  cont.innerHTML=cats.map(c => `<div class="pill" onclick="togglePill(this,'cat')">${esc(c)}</div>`).join("");
-}
-
-function togglePill(el, type){
-  el.classList.toggle("active");
-  if(type==='cat') updateSubPills();
-}
-
-function updateSubPills(){
-  const activeCats = Array.from(document.querySelectorAll("#reg-cat-pills .pill.active")).map(p => p.textContent);
-  const subs = [...new Set(allGroups.filter(g => activeCats.includes(g.cat)).map(g => g.sub).filter(Boolean))];
-  const cont = document.getElementById("reg-sub-pills");
-  const currentActive = Array.from(document.querySelectorAll("#reg-sub-pills .pill.active")).map(p => p.textContent);
-  
-  cont.innerHTML = subs.map(s => {
-    const isActive = currentActive.includes(s) ? " active" : "";
-    return `<div class="pill${isActive}" onclick="togglePill(this,'sub')">${esc(s)}</div>`;
-  }).join("");
-}
-
-function showRegModal(){
-  document.getElementById("reg-err").textContent="";
-  document.getElementById("reg-modal").classList.remove("hidden");
-}
-
-async function submitRegistration(){
-  const first=document.getElementById("reg-first").value.trim();
-  const last=document.getElementById("reg-last").value.trim();
-  const cats=Array.from(document.querySelectorAll("#reg-cat-pills .pill.active")).map(p => p.textContent);
-  const subs=Array.from(document.querySelectorAll("#reg-sub-pills .pill.active")).map(p => p.textContent);
-
-  if(!first){document.getElementById("reg-err").textContent="Prénom requis.";return;}
-  if(cats.length===0){document.getElementById("reg-err").textContent="Choisis au moins une discipline.";return;}
-  
-  if(!uid) uid=genUID();
-  storageSet("fts_forum_uid",uid);
-  
-  const data={
-    name: last ? first+" "+last : first,
-    group: cats.join(", "),
-    subgroup: subs.join(", "),
-    status: "pending",
-    ts: Date.now()
-  };
-  userData=data;
-  await db.ref("fts_forum/users/"+uid).set(data);
   listenUserStatus();
-  document.getElementById("reg-modal").classList.add("hidden");
   enterForum();
 }
 
-function editRegistration(){
-  if(!userData)return;
-  document.getElementById("reg-first").value = userData.name.split(" ")[0];
-  document.getElementById("reg-last").value = userData.name.split(" ").slice(1).join(" ");
-  
-  const cats = (userData.group||"").split(", ");
-  const subs = (userData.subgroup||"").split(", ");
-  
-  document.querySelectorAll("#reg-cat-pills .pill").forEach(p => {
-    p.classList.toggle("active", cats.includes(p.textContent));
-  });
-  updateSubPills();
-  document.querySelectorAll("#reg-sub-pills .pill").forEach(p => {
-    p.classList.toggle("active", subs.includes(p.textContent));
-  });
-  showRegModal();
-}
-
-async function loadUserData(){
-  const snap=await db.ref("fts_forum/users/"+uid).once("value");
-  if(snap.exists()){ userData=snap.val(); listenUserStatus(); enterForum(); }
-  else showRegModal();
-}
-
-function listenUserStatus(){
-  db.ref("fts_forum/users/"+uid+"/status").on("value",snap => {
-    if(snap.exists()){ userData.status=snap.val(); updateStatusUI(); renderChannels(); }
+function listenUserStatus() {
+  db.ref("fts_forum/users/" + uid + "/status").on("value", snap => {
+    if (snap.exists()) {
+      userData.status = snap.val();
+      updateStatusUI();
+      renderChannels();
+    }
   });
 }
 
-function enterForum(){
-  document.getElementById("uavatar").textContent=userData.name.charAt(0);
-  document.getElementById("uname").textContent=userData.name;
+function enterForum() {
+  const initials = userData.name ? userData.name.charAt(0).toUpperCase() : "?";
+  document.getElementById("uavatar").textContent = initials;
+  document.getElementById("uname").textContent   = userData.name;
   updateStatusUI();
   renderChannels();
   switchChannel("general");
   checkNotifStatus();
 }
 
-function updateStatusUI(){
-  document.getElementById("pending-bar").classList.toggle("show", userData.status==="pending");
+function updateStatusUI() {
+  document.getElementById("pending-bar").classList.toggle("show",
+    userData.status === "pending" && userProfile.role !== "admin");
 }
 
-// MODIFICATION : Création des canaux pour les sous-catégories
-function getUserChannels(){
-  const channels=[{id:"general",icon:"💬",name:"Général",desc:"Ouvert à tous"}];
-  if(userData && userData.status==="active"){
-    if(userData.group){
-      userData.group.split(", ").forEach(c => {
-        channels.push({id: norm(c), icon: catIcon(c), name: c, desc: "Canal "+c});
-      });
-    }
-    if(userData.subgroup){
-      userData.subgroup.split(", ").forEach(s => {
-        channels.push({id: norm(s), icon: "📅", name: s, desc: "Canal créneau "+s});
-      });
-    }
+/* ── CANAUX ───────────────────────────────────────────────────── */
+function getUserChannels() {
+  const channels = [{id:"general", icon:"💬", name:"Général", desc:"Ouvert à tous"}];
+
+  // Admin voit tous les canaux depuis le profil forum
+  const isAdmin = userProfile && userProfile.role === "admin";
+
+  if (userData && userData.status === "active" || isAdmin) {
+
+    // Canaux disciplines
+    const groups = (userData.group || "").split(", ").filter(Boolean);
+    groups.forEach(c => {
+      channels.push({ id: norm(c), icon: catIcon(c), name: c, desc: "Canal " + c });
+    });
+
+    // Canaux créneaux (sous-groupes assignés par l'admin)
+    const subs = (userData.subgroup || "").split(", ").filter(Boolean);
+    subs.forEach(s => {
+      channels.push({ id: norm(s), icon: "📅", name: s, desc: "Créneau " + s });
+    });
   }
+
   return channels;
 }
 
-function renderChannels(){
-  const list=document.getElementById("channel-list");
-  const channels=getUserChannels();
-  list.innerHTML=channels.map(c => `
-    <div class="channel${c.id===currentChannel?" active":""}" onclick="switchChannel('${c.id}')">
+function renderChannels() {
+  const list = document.getElementById("channel-list");
+  const channels = getUserChannels();
+  list.innerHTML = channels.map(c => `
+    <div class="channel${c.id === currentChannel ? " active" : ""}" onclick="switchChannel('${esc(c.id)}')">
       <span class="channel-icon">${c.icon}</span>
       <span>${esc(c.name)}</span>
     </div>`).join("");
 }
 
-function switchChannel(id){
-  const ch = getUserChannels().find(c => c.id===id) || getUserChannels()[0];
-  currentChannel=ch.id;
+function switchChannel(id) {
+  const ch = getUserChannels().find(c => c.id === id) || getUserChannels()[0];
+  currentChannel = ch.id;
   renderChannels();
-  document.getElementById("ch-icon").textContent=ch.icon;
-  document.getElementById("ch-title").textContent=ch.name;
-  document.getElementById("ch-desc").textContent=ch.desc;
-  document.getElementById("messages").innerHTML="";
-  if(currentListener) currentListener();
+  document.getElementById("ch-icon").textContent  = ch.icon;
+  document.getElementById("ch-title").textContent = ch.name;
+  document.getElementById("ch-desc").textContent  = ch.desc;
+  document.getElementById("messages").innerHTML   = "";
+  if (currentListener) currentListener();
   loadMessages(ch.id);
 }
 
-function loadMessages(id){
-  const ref=db.ref("fts_forum/messages/"+id).limitToLast(50);
+/* ── MESSAGES ─────────────────────────────────────────────────── */
+function loadMessages(id) {
+  const ref = db.ref("fts_forum/messages/" + id).limitToLast(50);
   ref.on("child_added", snap => {
-    appendMsg(snap.val(), snap.val().name===userData.name, snap.key);
+    appendMsg(snap.val(), snap.val().name === userData.name, snap.key);
   });
   currentListener = () => ref.off();
 }
 
-function sendMessage(){
-  const input=document.getElementById("msg-input");
-  const txt=input.value.trim();
-  if(!txt)return;
-  db.ref("fts_forum/messages/"+currentChannel).push({name:userData.name, text:txt, ts:Date.now()});
-  notifyChannel(currentChannel, userData.name+" : "+txt.substring(0,80));
-  input.value=""; input.style.height="";
+function sendMessage() {
+  const input = document.getElementById("msg-input");
+  const txt   = input.value.trim();
+  if (!txt) return;
+  db.ref("fts_forum/messages/" + currentChannel).push({
+    name: userData.name,
+    text: txt,
+    ts:   Date.now()
+  });
+  notifyChannel(currentChannel, userData.name + " : " + txt.substring(0, 80));
+  input.value = "";
+  input.style.height = "";
 }
 
-function appendMsg(m, own, key){
-  const wrap=document.getElementById("messages");
-  const div=document.createElement("div");
-  div.className="msg "+(own?"own":"other");
-  const isMedia = m.text && m.text.startsWith("[media]");
+function appendMsg(m, own, key) {
+  const wrap    = document.getElementById("messages");
+  const div     = document.createElement("div");
+  div.className = "msg " + (own ? "own" : "other");
+  const isMedia  = m.text && m.text.startsWith("[media]");
   const mediaUrl = isMedia ? m.text.slice(7) : null;
-  div.innerHTML=`
-    <div class="msg-meta">${!own?`<span class="msg-author">${esc(m.name)}</span>`:""} <span>${new Date(m.ts).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span></div>
-    ${isMedia?`<div class="msg-bubble">${renderMedia(mediaUrl)}</div>`:`<div class="msg-bubble">${esc(m.text).replace(/\n/g,"<br>")}</div>`}
-    ${adminMode?`<button class="btn-del-msg" onclick="deleteMsg('${key}')">🗑</button>`:""}`;
-  wrap.appendChild(div); scrollBottom();
+  div.innerHTML = `
+    <div class="msg-meta">
+      ${!own ? `<span class="msg-author">${esc(m.name)}</span>` : ""}
+      <span>${new Date(m.ts).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span>
+    </div>
+    ${isMedia
+      ? `<div class="msg-bubble">${renderMedia(mediaUrl)}</div>`
+      : `<div class="msg-bubble">${esc(m.text).replace(/\n/g,"<br>")}</div>`}
+    ${adminMode ? `<button class="btn-del-msg" onclick="deleteMsg('${key}')">🗑</button>` : ""}`;
+  wrap.appendChild(div);
+  scrollBottom();
 }
 
-function deleteMsg(k){ if(confirm("Supprimer ?")) db.ref("fts_forum/messages/"+currentChannel+"/"+k).remove(); }
-function openAdminModal(){ document.getElementById("admin-modal").classList.remove("hidden"); }
-function closeAdminModal(){ document.getElementById("admin-modal").classList.add("hidden"); }
-function checkAdminPwd(){
-  if(document.getElementById("admin-pwd-input").value===ADMIN_PWD){ closeAdminModal(); adminMode=true; document.getElementById("admin-bar").classList.add("show"); switchChannel(currentChannel); }
+function deleteMsg(k) {
+  if (confirm("Supprimer ce message ?"))
+    db.ref("fts_forum/messages/" + currentChannel + "/" + k).remove();
 }
-function exitAdmin(){ adminMode=false; document.getElementById("admin-bar").classList.remove("show"); switchChannel(currentChannel); }
-function handleKey(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}}
-function autoResize(el){el.style.height="auto";el.style.height=el.scrollHeight+"px";}
 
+/* ── ADMIN ────────────────────────────────────────────────────── */
+function toggleAdminMode() {
+  // Uniquement accessible si role === admin (bouton visible seulement pour les admins)
+  if (!userProfile || userProfile.role !== "admin") return;
+  adminMode = !adminMode;
+  document.getElementById("admin-bar").classList.toggle("show", adminMode);
+  document.getElementById("btn-gear").classList.toggle("active", adminMode);
+  switchChannel(currentChannel); // Refresh affichage boutons suppression
+}
 
-function uploadMedia(file){
-  if(!file)return;
-  if(file.size>100*1024*1024){alert("Fichier trop volumineux (max 100 Mo)");return;}
-  const bar=document.getElementById("upload-bar");
-  const fill=document.getElementById("upload-fill");
-  const txt=document.getElementById("upload-txt");
+function exitAdmin() {
+  adminMode = false;
+  document.getElementById("admin-bar").classList.remove("show");
+  document.getElementById("btn-gear").classList.remove("active");
+  switchChannel(currentChannel);
+}
+
+/* ── DÉCONNEXION ─────────────────────────────────────────────── */
+function doSignOut() {
+  firebase.auth().signOut().then(() => {
+    window.location.href = "auth.html";
+  });
+}
+
+/* ── CLAVIER & RESIZE TEXTAREA ────────────────────────────────── */
+function handleKey(e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+function autoResize(el) {
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+}
+
+/* ── UPLOAD MÉDIA ─────────────────────────────────────────────── */
+function uploadMedia(file) {
+  if (!file) return;
+  if (file.size > 100 * 1024 * 1024) { alert("Fichier trop volumineux (max 100 Mo)"); return; }
+  const bar  = document.getElementById("upload-bar");
+  const fill = document.getElementById("upload-fill");
+  const txt  = document.getElementById("upload-txt");
   bar.classList.add("show");
-  fill.style.width="0%";
-  fill.style.background="var(--red)";
-  txt.textContent="Upload en cours…";
-  const fd=new FormData();
-  const cleanName=file.name.replace(/\.[^/.]+$/,"").replace(/[^a-zA-Z0-9_-]/g,"_");
-  fd.append("file",file);
-  fd.append("upload_preset",UPLOAD_PRESET);
-  fd.append("public_id","forum/"+cleanName);
-  fd.append("resource_type","auto");
-  const xhr=new XMLHttpRequest();
-  xhr.open("POST","https://api.cloudinary.com/v1_1/"+CLOUD_NAME+"/auto/upload");
-  xhr.upload.onprogress=function(e){
-    if(e.lengthComputable){
-      const pct=Math.round(e.loaded/e.total*100);
-      fill.style.width=pct+"%";
-      txt.textContent="Upload "+pct+"%…";
+  fill.style.width   = "0%";
+  fill.style.background = "var(--red)";
+  txt.textContent    = "Upload en cours…";
+  const fd = new FormData();
+  const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_");
+  fd.append("file", file);
+  fd.append("upload_preset", UPLOAD_PRESET);
+  fd.append("public_id", "forum/" + cleanName);
+  fd.append("resource_type", "auto");
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", "https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/auto/upload");
+  xhr.upload.onprogress = function(e) {
+    if (e.lengthComputable) {
+      const pct = Math.round(e.loaded / e.total * 100);
+      fill.style.width  = pct + "%";
+      txt.textContent   = "Upload " + pct + "%…";
     }
   };
-  xhr.onload=function(){
-    if(xhr.status===200){
-      const res=JSON.parse(xhr.responseText);
-      fill.style.background="#22c55e";
-      txt.textContent="✓ "+file.name;
-      setTimeout(function(){bar.classList.remove("show");},2000);
-      document.getElementById("file-input").value="";
-      if(firebaseOk&&userData){
-        db.ref("fts_forum/messages/"+currentChannel).push({
-          name:userData.name,text:"[media]"+res.secure_url,ts:Date.now()
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      const res = JSON.parse(xhr.responseText);
+      fill.style.background = "#22c55e";
+      txt.textContent = "✓ " + file.name;
+      setTimeout(() => bar.classList.remove("show"), 2000);
+      document.getElementById("file-input").value = "";
+      if (db && userData) {
+        db.ref("fts_forum/messages/" + currentChannel).push({
+          name: userData.name, text: "[media]" + res.secure_url, ts: Date.now()
         });
       }
-    }else{
-      txt.textContent="Erreur upload";
-      setTimeout(function(){bar.classList.remove("show");},3000);
+    } else {
+      txt.textContent = "Erreur upload";
+      setTimeout(() => bar.classList.remove("show"), 3000);
     }
   };
-  xhr.onerror=function(){
-    txt.textContent="Erreur réseau";
-    setTimeout(function(){bar.classList.remove("show");},3000);
+  xhr.onerror = function() {
+    txt.textContent = "Erreur réseau";
+    setTimeout(() => bar.classList.remove("show"), 3000);
   };
   xhr.send(fd);
 }
-function renderMedia(url){
-  const isCloudImg=url.includes("/image/upload/");
-  const isCloudVideo=url.includes("/video/upload/");
-  const ext=url.split("?")[0].split(".").pop().toLowerCase();
-  const isImg=isCloudImg||["jpg","jpeg","png","gif","webp"].includes(ext);
-  const isVideo=(isCloudVideo&&!["mp3","wav","ogg","aac","m4a"].includes(ext))||["mp4","mov","webm"].includes(ext);
-  const isAudio=["mp3","wav","ogg","aac","m4a"].includes(ext)||(isCloudVideo&&["mp3","wav","ogg","aac","m4a"].includes(ext));
-  const isPdf=ext==="pdf";
-  if(isImg) return `<img class="msg-img" src="${url}" onclick="window.open('${url}')">`;
-  if(isVideo) return `<video class="msg-video" src="${url}" controls playsinline></video>`;
-  if(isAudio){
-    const fname=decodeURIComponent(url.split("/").pop().split("?")[0]);
+
+function renderMedia(url) {
+  const isCloudImg   = url.includes("/image/upload/");
+  const isCloudVideo = url.includes("/video/upload/");
+  const ext = url.split("?")[0].split(".").pop().toLowerCase();
+  const isImg    = isCloudImg  || ["jpg","jpeg","png","gif","webp"].includes(ext);
+  const isVideo  = (isCloudVideo && !["mp3","wav","ogg","aac","m4a"].includes(ext)) || ["mp4","mov","webm"].includes(ext);
+  const isAudio  = ["mp3","wav","ogg","aac","m4a"].includes(ext) || (isCloudVideo && ["mp3","wav","ogg","aac","m4a"].includes(ext));
+  const isPdf    = ext === "pdf";
+  if (isImg)   return `<img class="msg-img" src="${url}" onclick="window.open('${url}')">`;
+  if (isVideo) return `<video class="msg-video" src="${url}" controls playsinline></video>`;
+  if (isAudio) {
+    const fname = decodeURIComponent(url.split("/").pop().split("?")[0]);
     return `<div style="margin-top:.4rem">
-      <div style="font-size:.72rem;color:var(--gold);margin-bottom:.3rem;display:flex;align-items:center;gap:.4rem">🎵 ${fname}</div>
+      <div style="font-size:.72rem;color:var(--gold);margin-bottom:.3rem">🎵 ${fname}</div>
       <audio controls preload="none" style="width:100%;min-width:200px;display:block"><source src="${url}" type="audio/mpeg"></audio>
       <a href="${url}" target="_blank" style="font-size:.65rem;color:var(--muted);text-decoration:none;display:block;margin-top:.2rem">Écouter / Télécharger</a>
     </div>`;
   }
-  if(isPdf) return `<a class="msg-pdf" href="${url}" target="_blank">📄 Ouvrir le PDF</a>`;
+  if (isPdf) return `<a class="msg-pdf" href="${url}" target="_blank">📄 Ouvrir le PDF</a>`;
   return `<a class="msg-pdf" href="${url}" target="_blank">📎 Fichier joint</a>`;
 }
 
-// ═══ NOTIFICATIONS PUSH ══════════════════════════
-function urlBase64ToUint8Array(b64){
-  const pad="=".repeat((4-b64.length%4)%4);
-  const base64=(b64+pad).replace(/-/g,"+").replace(/_/g,"/");
-  const raw=window.atob(base64);
-  const arr=new Uint8Array(raw.length);
-  for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i);
+/* ── NOTIFICATIONS PUSH ───────────────────────────────────────── */
+function urlBase64ToUint8Array(b64) {
+  const pad  = "=".repeat((4 - b64.length % 4) % 4);
+  const base64 = (b64 + pad).replace(/-/g, "+").replace(/_/g, "/");
+  const raw  = window.atob(base64);
+  const arr  = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
   return arr;
 }
-async function getSubscription(){
-  if(!("serviceWorker" in navigator)) return null;
-  const reg=await navigator.serviceWorker.ready;
+
+async function getSubscription() {
+  if (!("serviceWorker" in navigator)) return null;
+  const reg = await navigator.serviceWorker.ready;
   return reg.pushManager.getSubscription();
 }
-async function checkNotifStatus(){
-  const sub=await getSubscription();
+
+async function checkNotifStatus() {
+  const sub = await getSubscription();
   updateNotifBtn(!!sub);
-  const banner=document.getElementById("notif-banner");
-  if(Notification.permission==="denied"){
-    // Notifications bloquées : affiche un message d'aide
+  const banner = document.getElementById("notif-banner");
+  if (Notification.permission === "denied") {
     banner.classList.remove("hidden");
-    banner.querySelector(".notif-banner-title").textContent="Notifications bloquées";
-    banner.querySelector(".notif-banner-sub").textContent="Clique sur le 🔒 cadenas dans la barre d'adresse → Notifications → Autoriser";
-    banner.querySelector(".notif-banner-btn").style.display="none";
-    banner.querySelector(".notif-banner-icon").textContent="⚠️";
-  }else if(!sub && !storageGet("fts_notif_dismissed")){
+    banner.querySelector(".notif-banner-title").textContent = "Notifications bloquées";
+    banner.querySelector(".notif-banner-sub").textContent   = "Clique sur le 🔒 dans la barre d'adresse → Autoriser";
+    banner.querySelector(".notif-banner-btn").style.display = "none";
+    banner.querySelector(".notif-banner-icon").textContent  = "⚠️";
+  } else if (!sub && !storageGet("fts_notif_dismissed")) {
     banner.classList.remove("hidden");
-    banner.querySelector(".notif-banner-title").textContent="Ne rate aucun message !";
-    banner.querySelector(".notif-banner-sub").textContent="Active les notifications pour ton groupe";
-    banner.querySelector(".notif-banner-btn").style.display="";
-    banner.querySelector(".notif-banner-icon").textContent="🔔";
-  }else{
+  } else {
     banner.classList.add("hidden");
   }
 }
-async function activerNotifs(){
+
+async function activerNotifs() {
   document.getElementById("notif-banner").classList.add("hidden");
   await subscribePush();
 }
-function fermerBanniere(){
+
+function fermerBanniere() {
   document.getElementById("notif-banner").classList.add("hidden");
-  storageSet("fts_notif_dismissed","1");
+  storageSet("fts_notif_dismissed", "1");
 }
-function updateNotifBtn(on){
-  const btn=document.getElementById("btn-notif");
-  if(!btn)return;
-  btn.textContent=on?"🔔 Notifs activées":"🔕 Activer les notifs";
-  btn.classList.toggle("on",on);
+
+function updateNotifBtn(on) {
+  const btn = document.getElementById("btn-notif");
+  if (!btn) return;
+  btn.textContent = on ? "🔔 Notifs activées" : "🔕 Activer les notifs";
+  btn.classList.toggle("on", on);
 }
-async function toggleNotifications(){
-  const sub=await getSubscription();
-  if(sub){
+
+async function toggleNotifications() {
+  const sub = await getSubscription();
+  if (sub) {
     await sub.unsubscribe();
-    fetch(WORKER_URL+"/unsubscribe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid})}).catch(()=>{});
+    fetch(WORKER_URL + "/unsubscribe", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({uid})
+    }).catch(() => {});
     updateNotifBtn(false);
-  }else{ await subscribePush(); }
+  } else {
+    await subscribePush();
+  }
 }
-async function subscribePush(){
-  try{
-    const perm=await Notification.requestPermission();
-    if(perm!=="granted"){alert("Autorise les notifications pour continuer.");return;}
-    const reg=await navigator.serviceWorker.ready;
-    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});
-    await fetch(WORKER_URL+"/subscribe",{
-      method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({uid,subscription:sub.toJSON(),group:userData?userData.group:"",subgroup:userData?userData.subgroup:""})
+
+async function subscribePush() {
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") { alert("Autorise les notifications pour continuer."); return; }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    await fetch(WORKER_URL + "/subscribe", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        uid,
+        subscription: sub.toJSON(),
+        group:    userData ? userData.group    : "",
+        subgroup: userData ? userData.subgroup : ""
+      })
     });
     updateNotifBtn(true);
-  }catch(e){console.error("Push:",e);alert("Erreur notifications : "+e.message);}
-}
-function notifyChannel(channel,body){
-  const ch=getUserChannels().find(c=>c.id===channel)||{name:"Forum"};
-  let group="",subgroup="";
-  if(userData){
-    (userData.group||"").split(", ").forEach(g=>{if(norm(g)===channel)group=g;});
-    (userData.subgroup||"").split(", ").forEach(s=>{if(norm(s)===channel)subgroup=s;});
+  } catch(e) {
+    console.error("Push :", e);
+    alert("Erreur notifications : " + e.message);
   }
-  fetch(WORKER_URL+"/notify",{
-    method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({group,subgroup,title:"FTS — "+ch.name,body,url:"/forum.html",senderUid:uid})
-  }).catch(()=>{});
+}
+
+function notifyChannel(channel, body) {
+  const ch = getUserChannels().find(c => c.id === channel) || {name:"Forum"};
+  let group = "", subgroup = "";
+  if (userData) {
+    (userData.group    || "").split(", ").forEach(g => { if (norm(g) === channel) group    = g; });
+    (userData.subgroup || "").split(", ").forEach(s => { if (norm(s) === channel) subgroup = s; });
+  }
+  fetch(WORKER_URL + "/notify", {
+    method: "POST", headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      group, subgroup,
+      title: "FTS — " + ch.name, body,
+      url:   "/forum.html",
+      senderUid: uid
+    })
+  }).catch(() => {});
 }
 </script>
 </body>
