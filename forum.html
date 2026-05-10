@@ -885,7 +885,7 @@ function renderChannels() {
       }
 
       /* ── 3. Sous-groupes Firebase non couverts par le CSV ── */
-      if (!isAdmin && userSubNorms) {
+ /*     if (!isAdmin && userSubNorms) {
         const csvSubNormSet = new Set(csvStructure.flatMap(c => c.subs.map(s => norm(s.name))));
         const extraSubs = (userData?.subgroup || "").split(", ").filter(Boolean)
           .filter(s => !csvSubNormSet.has(norm(s)));
@@ -899,7 +899,7 @@ function renderChannels() {
             html += mkChannel({ id: norm(s), icon: "📅", name: s, desc: "Créneau " + s }, false);
           }
         }
-      }
+      }*/
 
     } else if (!csvLoaded) {
       /* CSV en cours de chargement */
