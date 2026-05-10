@@ -679,12 +679,20 @@ async function loadCSV() {
         subs: []
       });
     }
-
     if (sub) {
-      map.get(cat).subs.push({
-        name: sub
-      });
-    }
+
+  // Vérifie si la sous-catégorie existe déjà
+  const alreadyExists = map.get(cat).subs.some(
+    s => norm(s.name) === norm(sub)
+  );
+
+  // Ajoute seulement si elle n'existe pas
+  if (!alreadyExists) {
+    map.get(cat).subs.push({
+      name: sub
+    });
+  }
+}
   }
 
   csvStructure = Array.from(map.values());
